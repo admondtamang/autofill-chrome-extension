@@ -1,0 +1,11 @@
+{
+  "formKey": "fixture-traps",
+  "version": 1,
+  "pageMatch": { "host": "localhost:5174", "urlIncludes": "/traps.html", "headingText": "Hazard and Safety Traps" },
+  "fields": [
+    { "path": "contact.phone", "selector": "#contactPhone", "type": "text", "required": false },
+    { "path": "citizenship.label", "selector": "#citizenshipLimited", "type": "select", "required": true },
+    { "path": "employment.occupation", "selector": "#occupation", "fallbackLabel": "Occupation", "type": "text", "required": false },
+    { "path": "address.residential", "selector": "#lockedAddress", "type": "text", "required": false }
+  ]
+}

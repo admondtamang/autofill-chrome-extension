@@ -1,0 +1,12 @@
+{
+  "formKey": "fixture-postback",
+  "version": 1,
+  "pageMatch": { "host": "localhost:5174", "urlIncludes": "/postback.html", "headingText": "Passport Postback Details" },
+  "fields": [
+    { "path": "name.given", "selector": "#applicantName", "type": "text", "required": true },
+    { "path": "citizenship.label", "selector": "#passportCountry", "fallbackLabel": "Country of passport", "type": "select", "waitAfterMs": 2500, "required": true },
+    { "path": "passport.number", "selector": "#passportNumber", "fallbackLabel": "Passport number", "type": "text", "required": true },
+    { "path": "passport.issued", "selector": "#passportIssued", "fallbackLabel": "Date of issue", "type": "date", "format": "dd MMM yyyy", "required": false },
+    { "path": "passport.expires", "selector": "#passportExpires", "fallbackLabel": "Date of expiry", "type": "date", "format": "dd MMM yyyy", "required": false }
+  ]
+}

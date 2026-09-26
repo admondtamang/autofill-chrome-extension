@@ -1,0 +1,63 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>React Controlled Fixture</title>
+<style>body{font:14px/1.5 system-ui;max-width:640px;margin:2rem auto;padding:0 1rem}label{display:block;margin:.75rem 0 .2rem;font-weight:600}input,select{width:100%;padding:.4rem;box-sizing:border-box}pre{background:#111;color:#0f0;padding:.75rem;overflow:auto}</style>
+
+<h1>React Controlled Inputs</h1>
+<p>Every input below is React-controlled and the tree re-renders on a timer, so a naive
+   <code>el.value = x</code> is reverted. Only the native value setter + a bubbling
+   <code>input</code> event reaches React state. The state dump is the source of truth.</p>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script>
+(function () {
+  var e = React.createElement;
+  var useState = React.useState, useEffect = React.useEffect;
+
+  var COUNTRIES = [
+    ['', '-- select --'],
+    ['AUS', 'Australia'],
+    ['IND', 'India'],
+    ['IRL', 'Ireland'],
+    ['NPL', 'Nepal']
+  ];
+
+  function App() {
+    var s = useState({ given: '', family: '', citizenship: '' }), st = s[0], setSt = s[1];
+    var t = useState(0), setTick = t[1];
+
+    // force a re-render every 300ms: anything not in React state is wiped
+    useEffect(function () {
+      var id = setInterval(function () { setTick(function (n) { return n + 1; }); }, 300);
+      return function () { clearInterval(id); };
+    }, []);
+
+    function bind(key) {
+      return function (ev) {
+        var v = ev.target.value;
+        setSt(function (prev) { var next = Object.assign({}, prev); next[key] = v; return next; });
+      };
+    }
+
+    return e('form', { id: 'react-form', onSubmit: function (ev) { ev.preventDefault(); } },
+      e('label', { htmlFor: 'r-given' }, 'Given name'),
+      e('input', { type: 'text', id: 'r-given', name: 'r-given', autoComplete: 'off', value: st.given, onChange: bind('given') }),
+
+      e('label', { htmlFor: 'r-family' }, 'Family name'),
+      e('input', { type: 'text', id: 'r-family', name: 'r-family', autoComplete: 'off', value: st.family, onChange: bind('family') }),
+
+      e('label', { htmlFor: 'r-citizenship' }, 'Country of citizenship'),
+      e('select', { id: 'r-citizenship', name: 'r-citizenship', value: st.citizenship, onChange: bind('citizenship') },
+        COUNTRIES.map(function (c) { return e('option', { key: c[0], value: c[0] }, c[1]); })),
+
+      e('h2', null, 'React state'),
+      e('pre', { id: 'state' }, JSON.stringify(st, null, 2))
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+})();
+</script>

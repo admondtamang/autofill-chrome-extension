@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Repeating Rows Fixture</title>
+<style>body{font:14px/1.5 system-ui;max-width:760px;margin:2rem auto;padding:0 1rem}.address-row{border:1px solid #ccc;padding:.5rem 1rem;margin:.75rem 0}.address-row label{display:block;margin:.5rem 0 .2rem;font-weight:600}.address-row input{width:100%;padding:.4rem;box-sizing:border-box}button{padding:.5rem 1rem;margin-top:.5rem}</style>
+
+<h1>Address History Rows</h1>
+<p>Starts with <strong>zero</strong> rows. The engine must click "Add another address"
+   once per <code>addressHistory</code> item; field names are index-based.</p>
+
+<form id="repeat-form" onsubmit="return false">
+  <div id="addresses"></div>
+  <button type="button" id="add-address">Add another address</button>
+</form>
+
+<script>
+(function () {
+  var host = document.getElementById('addresses');
+  var n = 0;
+
+  function input(idx, key, label, ph) {
+    var wrap = document.createElement('div');
+    var l = document.createElement('label');
+    var id = 'addr_' + idx + '_' + key;
+    l.setAttribute('for', id);
+    l.textContent = label;
+    var i = document.createElement('input');
+    i.type = 'text';
+    i.id = id;
+    i.name = 'addr[' + idx + '].' + key;
+    i.autocomplete = 'off';
+    if (ph) i.placeholder = ph;
+    wrap.appendChild(l);
+    wrap.appendChild(i);
+    return wrap;
+  }
+
+  document.getElementById('add-address').addEventListener('click', function () {
+    var idx = n++;
+    var row = document.createElement('div');
+    row.className = 'address-row';
+    row.setAttribute('data-index', String(idx));
+    var h = document.createElement('h2');
+    h.textContent = 'Address ' + (idx + 1);
+    row.appendChild(h);
+    row.appendChild(input(idx, 'street', 'Street'));
+    row.appendChild(input(idx, 'city', 'City or town'));
+    row.appendChild(input(idx, 'country', 'Country'));
+    row.appendChild(input(idx, 'from', 'Resident from (yyyy-mm-dd)', 'yyyy-mm-dd'));
+    row.appendChild(input(idx, 'to', 'Resident to (yyyy-mm-dd)', 'yyyy-mm-dd'));
+    host.appendChild(row);
+  });
+})();
+</script>

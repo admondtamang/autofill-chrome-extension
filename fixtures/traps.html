@@ -1,0 +1,51 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Hazard Traps Fixture</title>
+<style>body{font:14px/1.5 system-ui;max-width:640px;margin:2rem auto;padding:0 1rem}label{display:block;margin:.75rem 0 .2rem;font-weight:600}input,select{width:100%;padding:.4rem;box-sizing:border-box}.danger{border:2px solid #c00;padding:.5rem 1rem;margin-top:1.5rem}button,input[type=submit]{width:auto;padding:.5rem 1rem}</style>
+
+<h1>Hazard and Safety Traps</h1>
+<p>Nothing inside the red box may ever be clicked, focused-navigated, or dispatched to by the fill engine.</p>
+
+<form id="traps-form" onsubmit="alert('SUBMITTED - the engine must never cause this'); return false;">
+
+  <!-- SAFE 1: reformats on blur. Whatever is written is rewritten, so verify() must report `rejected`. -->
+  <label for="contactPhone">Contact phone</label>
+  <input type="text" id="contactPhone" name="contactPhone" autocomplete="off">
+
+  <!-- SAFE 2: select with NO option that can ever match the payload's citizenship label -->
+  <label for="citizenshipLimited">Country of citizenship</label>
+  <select id="citizenshipLimited" name="citizenshipLimited">
+    <option value="">-- select --</option>
+    <option value="AUS">Australia</option>
+    <option value="NZL">New Zealand</option>
+  </select>
+
+  <!-- SAFE 3: Google-Forms style. No id, no name, only a hashed class. Reachable only by label text. -->
+  <div class="freebirdFormviewerComponentsQuestionBaseRoot">
+    <label class="M7eMe">Occupation
+      <input type="text" class="whsOnd zHQkBf" autocomplete="off">
+    </label>
+  </div>
+
+  <!-- SAFE 4: readonly. A write must not stick; expect `rejected`. -->
+  <label for="lockedAddress">Residential address (locked by the department)</label>
+  <input type="text" id="lockedAddress" name="lockedAddress" readonly value="">
+
+  <!-- SAFE 5: disabled. Never mapped, listed here so the engine can be proven to skip it. -->
+  <label for="disabledRef">Reference number (disabled)</label>
+  <input type="text" id="disabledRef" name="disabledRef" disabled>
+
+  <div class="danger">
+    <strong>Never touch anything below.</strong>
+    <label><input type="checkbox" id="declaration" name="declaration"> I declare the information given is complete and correct.</label>
+    <button type="submit" id="next">Next</button>
+    <input type="submit" id="pay" value="Pay">
+  </div>
+</form>
+
+<script>
+document.getElementById('contactPhone').addEventListener('blur', function () {
+  // strips spaces and leading +, uppercases: the value read back never equals the value written
+  this.value = this.value.replace(/[\s+]/g, '').toUpperCase();
+});
+</script>

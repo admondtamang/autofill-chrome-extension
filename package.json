@@ -1,0 +1,38 @@
+{
+  "name": "immifill-extension",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "postinstall": "wxt prepare",
+    "dev": "wxt",
+    "dev:api": "WXT_DATA_SOURCE=api wxt",
+    "build": "wxt build --mode development",
+    "build:prod": "wxt build --mode production",
+    "zip": "wxt zip --mode production",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "fixtures": "vite fixtures --host localhost --port 5174 --strictPort",
+    "fixtures:alt": "vite fixtures --host 127.0.0.1 --port 5175 --strictPort",
+    "check:synthetic": "node scripts/check-synthetic.mjs"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0",
+    "preact": "^10.29.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@preact/preset-vite": "^2.10.2",
+    "@types/chrome": "^0.1.28",
+    "@types/node": "^24.10.1",
+    "jsdom": "^27.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12",
+    "vitest": "^3.2.4",
+    "wxt": "^0.21.4"
+  }
+}

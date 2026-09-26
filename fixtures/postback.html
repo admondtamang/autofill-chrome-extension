@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Postback Form Fixture</title>
+<style>body{font:14px/1.5 system-ui;max-width:640px;margin:2rem auto;padding:0 1rem}label{display:block;margin:.75rem 0 .2rem;font-weight:600}input,select{width:100%;padding:.4rem;box-sizing:border-box}#dependent{border:1px dashed #999;padding:.5rem 1rem;margin-top:1rem}.pending{color:#a60}</style>
+
+<h1>Passport Postback Details</h1>
+<p>Choosing a country of passport re-renders the dependent section after a random 500-1500 ms delay.
+   The section's DOM nodes are destroyed and recreated, so any cached element reference goes stale.</p>
+
+<form id="postback-form" onsubmit="return false">
+  <label for="applicantName">Full name</label>
+  <input type="text" id="applicantName" name="applicantName" autocomplete="off">
+
+  <label for="passportCountry">Country of passport</label>
+  <select id="passportCountry" name="passportCountry">
+    <option value="">-- select --</option>
+    <option value="AUS">Australia</option>
+    <option value="IND">India</option>
+    <option value="IRL">Ireland</option>
+    <option value="NPL">Nepal</option>
+  </select>
+
+  <div id="dependent"><p class="pending">Select a country of passport to load passport details.</p></div>
+</form>
+
+<script>
+(function () {
+  var sel = document.getElementById('passportCountry');
+  var host = document.getElementById('dependent');
+  var timer = null;
+
+  function render(code) {
+    // destroy and recreate every node in the section
+    while (host.firstChild) host.removeChild(host.firstChild);
+    var h = document.createElement('h2');
+    h.textContent = 'Passport issued by ' + code;
+    host.appendChild(h);
+    host.appendChild(field('passportNumber', 'Passport number'));
+    host.appendChild(field('passportIssued', 'Date of issue (dd mmm yyyy)'));
+    host.appendChild(field('passportExpires', 'Date of expiry (dd mmm yyyy)'));
+  }
+
+  function field(id, text) {
+    var wrap = document.createElement('div');
+    var l = document.createElement('label');
+    l.setAttribute('for', id);
+    l.textContent = text;
+    var i = document.createElement('input');
+    i.type = 'text';
+    i.id = id;
+    i.name = id;
+    i.autocomplete = 'off';
+    wrap.appendChild(l);
+    wrap.appendChild(i);
+    return wrap;
+  }
+
+  sel.addEventListener('change', function () {
+    if (timer) clearTimeout(timer);
+    while (host.firstChild) host.removeChild(host.firstChild);
+    var p = document.createElement('p');
+    p.className = 'pending';
+    p.textContent = 'Loading passport details...';
+    host.appendChild(p);
+    if (!sel.value) return;
+    var delay = 500 + Math.floor(Math.random() * 1001); // 500-1500 ms
+    timer = setTimeout(function () { render(sel.value); }, delay);
+  });
+})();
+</script>

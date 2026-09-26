@@ -1,0 +1,31 @@
+{
+  // Not `extends: .wxt/tsconfig.json`: that file does not exist on a fresh
+  // clone, and Vite fails to load wxt.config.ts before `wxt prepare` can write
+  // it. WXT's generated globals come in via the .wxt/wxt.d.ts reference below.
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["chrome", "node", "vite/client"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@@/*": ["./*"]
+    },
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": [".wxt/wxt.d.ts", "**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", ".output", "fixtures"]
+}

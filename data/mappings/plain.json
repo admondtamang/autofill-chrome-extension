@@ -1,0 +1,17 @@
+{
+  "formKey": "fixture-plain",
+  "version": 1,
+  "pageMatch": { "host": "localhost:5174", "urlIncludes": "/plain.html", "headingText": "Plain Personal Details" },
+  "fields": [
+    { "path": "name.given", "selector": "#given", "type": "text", "required": true },
+    { "path": "name.family", "selector": "#family", "type": "text", "required": true },
+    { "path": "contact.email", "selector": "#email", "type": "text", "required": false },
+    { "path": "contact.phone", "selector": "#phone", "type": "text", "required": false },
+    { "path": "dob", "selector": "#dob", "type": "date", "format": "dd/MM/yyyy", "required": true },
+    { "path": "citizenship.label", "selector": "#country", "fallbackLabel": "Country of citizenship", "type": "select", "required": true },
+    { "path": "currentVisa.type", "selector": "#visaType", "type": "select", "required": false },
+    { "path": "location", "selector": "input[name=\"applyFrom\"][value=\"{value}\"]", "type": "radio", "required": false },
+    { "path": "serviceTypes", "selector": "#usingAgent", "type": "checkbox", "required": false },
+    { "path": "address.residential", "selector": "#residential", "type": "textarea", "required": false }
+  ]
+}

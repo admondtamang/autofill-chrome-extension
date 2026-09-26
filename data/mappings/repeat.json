@@ -1,0 +1,12 @@
+{
+  "formKey": "fixture-repeat",
+  "version": 1,
+  "pageMatch": { "host": "localhost:5174", "urlIncludes": "/repeat.html", "headingText": "Address History Rows" },
+  "fields": [
+    { "path": "addressHistory[].street", "selector": "[name$=\".street\"]", "type": "text", "required": true, "repeatGroup": "addressHistory", "addButtonSelector": "#add-address", "rowSelector": ".address-row" },
+    { "path": "addressHistory[].city", "selector": "[name$=\".city\"]", "type": "text", "required": false, "repeatGroup": "addressHistory", "addButtonSelector": "#add-address", "rowSelector": ".address-row" },
+    { "path": "addressHistory[].country", "selector": "[name$=\".country\"]", "type": "text", "required": false, "repeatGroup": "addressHistory", "addButtonSelector": "#add-address", "rowSelector": ".address-row" },
+    { "path": "addressHistory[].from", "selector": "[name$=\".from\"]", "type": "date", "format": "yyyy-MM-dd", "required": false, "repeatGroup": "addressHistory", "addButtonSelector": "#add-address", "rowSelector": ".address-row" },
+    { "path": "addressHistory[].to", "selector": "[name$=\".to\"]", "type": "date", "format": "yyyy-MM-dd", "required": false, "repeatGroup": "addressHistory", "addButtonSelector": "#add-address", "rowSelector": ".address-row" }
+  ]
+}

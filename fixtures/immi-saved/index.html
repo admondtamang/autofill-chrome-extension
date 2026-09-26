@@ -1,0 +1,167 @@
+<!--
+  ============================================================================
+  SYNTHETIC REPLICA - NOT A REAL SAVED IMMIACCOUNT PAGE.
+
+  Hand-written to mimic the markup patterns of an ASP.NET WebForms ImmiAccount
+  page: ctl00_ContentPlaceHolder1_* ids, ctl00$ContentPlaceHolder1$* names,
+  nested <table> layout, a hidden __VIEWSTATE, <label for=...> associations and
+  a postback on "Country of passport". No government system was contacted.
+
+  HOW TO DROP IN A REAL SAVED PAGE LATER
+  --------------------------------------
+  1. In a real ImmiAccount session, File > Save Page As > "Web Page, Complete"
+     into fixtures/immi-saved/. Keep the assets folder next to the html.
+  2. Rename the html to index.html (replacing this file), or keep both and point
+     data/mappings/immi-saved.json at the new filename via pageMatch.urlIncludes.
+  3. SCRUB IT: delete __VIEWSTATE / __EVENTVALIDATION payloads if they embed
+     session data, and remove every real applicant value before committing.
+  4. Re-point the mapping. data/mappings/immi-saved.json keys off ONLY these
+     attributes, in this order of preference:
+       - id      e.g. #ctl00_ContentPlaceHolder1_txtFamilyName
+       - name    e.g. [name="ctl00$ContentPlaceHolder1$ddlPassportCountry"]
+       - label   via fallbackLabel, matching the <label for=...> text
+     If the real page uses different ids, update `selector` on each field and
+     leave `fallbackLabel` as the safety net.
+  5. pageMatch.headingText must be a substring of the real page's <h1> or
+     <legend>. Update it if the saved page's heading differs.
+  ============================================================================
+-->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your application - Personal details</title>
+<style>
+body{font:13px/1.5 Arial,Helvetica,sans-serif;margin:0;background:#f4f4f4}
+#header{background:#1a4d80;color:#fff;padding:.75rem 1rem}
+#content{background:#fff;max-width:820px;margin:1rem auto;padding:1rem 1.5rem;border:1px solid #ccc}
+table{border-collapse:collapse}
+td{padding:.35rem .5rem;vertical-align:top}
+td.label{width:280px;font-weight:bold}
+input[type=text]{width:260px;padding:.25rem}
+select{width:270px;padding:.25rem}
+legend{font-weight:bold;font-size:1.05em}
+fieldset{border:1px solid #bbb;margin:1rem 0}
+.required{color:#c00}
+#pnlPassportDetails{border:1px solid #bbb;padding:.5rem 1rem;margin-top:1rem}
+</style>
+</head>
+<body>
+<div id="header">ImmiAccount (synthetic replica)</div>
+
+<form method="post" action="./index.html" id="aspnetForm" onsubmit="return false">
+<div class="aspNetHidden">
+  <input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="/wEPDwUKMTU2NzI4OTAxNGRkU1lOVEhFVElDX1JFUExJQ0FfTk9fUkVBTF9TVEFURQ==">
+  <input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="">
+  <input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="">
+  <input type="hidden" name="__EVENTVALIDATION" id="__EVENTVALIDATION" value="/wEdAAJTWU5USEVUSUM=">
+</div>
+
+<div id="content">
+  <h1 id="ctl00_ContentPlaceHolder1_lblPageHeading">Personal details - Applicant</h1>
+
+  <fieldset>
+    <legend>Applicant details</legend>
+    <table>
+      <tr>
+        <td class="label"><label for="ctl00_ContentPlaceHolder1_txtFamilyName">Family name <span class="required">*</span></label></td>
+        <td><input type="text" id="ctl00_ContentPlaceHolder1_txtFamilyName" name="ctl00$ContentPlaceHolder1$txtFamilyName" maxlength="60"></td>
+      </tr>
+      <tr>
+        <td class="label"><label for="ctl00_ContentPlaceHolder1_txtGivenNames">Given names <span class="required">*</span></label></td>
+        <td><input type="text" id="ctl00_ContentPlaceHolder1_txtGivenNames" name="ctl00$ContentPlaceHolder1$txtGivenNames" maxlength="60"></td>
+      </tr>
+      <tr>
+        <td class="label"><label for="ctl00_ContentPlaceHolder1_txtDateOfBirth">Date of birth (DD/MM/YYYY) <span class="required">*</span></label></td>
+        <td><input type="text" id="ctl00_ContentPlaceHolder1_txtDateOfBirth" name="ctl00$ContentPlaceHolder1$txtDateOfBirth" maxlength="10"></td>
+      </tr>
+      <tr>
+        <td class="label"><label for="ctl00_ContentPlaceHolder1_txtEmail">Email address</label></td>
+        <td><input type="text" id="ctl00_ContentPlaceHolder1_txtEmail" name="ctl00$ContentPlaceHolder1$txtEmail" maxlength="120"></td>
+      </tr>
+      <tr>
+        <td class="label"><label for="ctl00_ContentPlaceHolder1_txtPhone">Mobile phone number</label></td>
+        <td><input type="text" id="ctl00_ContentPlaceHolder1_txtPhone" name="ctl00$ContentPlaceHolder1$txtPhone" maxlength="30"></td>
+      </tr>
+    </table>
+  </fieldset>
+
+  <fieldset>
+    <legend>Passport details</legend>
+    <table>
+      <tr>
+        <td class="label"><label for="ctl00_ContentPlaceHolder1_ddlPassportCountry">Country of passport <span class="required">*</span></label></td>
+        <td>
+          <select id="ctl00_ContentPlaceHolder1_ddlPassportCountry" name="ctl00$ContentPlaceHolder1$ddlPassportCountry">
+            <option value="">Please select</option>
+            <option value="1101">AUSTRALIA</option>
+            <option value="7103">INDIA</option>
+            <option value="2205">IRELAND</option>
+            <option value="7202">NEPAL</option>
+          </select>
+        </td>
+      </tr>
+    </table>
+    <div id="ctl00_ContentPlaceHolder1_pnlPassportDetails" style="display:none">
+      <table>
+        <tr>
+          <td class="label"><label for="ctl00_ContentPlaceHolder1_txtPassportNumber">Passport number <span class="required">*</span></label></td>
+          <td><input type="text" id="ctl00_ContentPlaceHolder1_txtPassportNumber" name="ctl00$ContentPlaceHolder1$txtPassportNumber" maxlength="20"></td>
+        </tr>
+        <tr>
+          <td class="label"><label for="ctl00_ContentPlaceHolder1_txtPassportIssue">Date of issue (DD/MM/YYYY)</label></td>
+          <td><input type="text" id="ctl00_ContentPlaceHolder1_txtPassportIssue" name="ctl00$ContentPlaceHolder1$txtPassportIssue" maxlength="10"></td>
+        </tr>
+        <tr>
+          <td class="label"><label for="ctl00_ContentPlaceHolder1_txtPassportExpiry">Date of expiry (DD/MM/YYYY)</label></td>
+          <td><input type="text" id="ctl00_ContentPlaceHolder1_txtPassportExpiry" name="ctl00$ContentPlaceHolder1$txtPassportExpiry" maxlength="10"></td>
+        </tr>
+      </table>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Residence</legend>
+    <table>
+      <tr>
+        <td class="label"><label for="ctl00_ContentPlaceHolder1_txtResidentialAddress">Residential address</label></td>
+        <td><input type="text" id="ctl00_ContentPlaceHolder1_txtResidentialAddress" name="ctl00$ContentPlaceHolder1$txtResidentialAddress" maxlength="200"></td>
+      </tr>
+      <tr>
+        <td class="label">Is the applicant in Australia?</td>
+        <td>
+          <label><input type="radio" name="ctl00$ContentPlaceHolder1$rblLocation" id="ctl00_ContentPlaceHolder1_rblLocation_0" value="Onshore"> Onshore</label>
+          <label><input type="radio" name="ctl00$ContentPlaceHolder1$rblLocation" id="ctl00_ContentPlaceHolder1_rblLocation_1" value="Offshore"> Offshore</label>
+        </td>
+      </tr>
+    </table>
+  </fieldset>
+
+  <div class="danger">
+    <input type="submit" id="ctl00_ContentPlaceHolder1_btnNext" name="ctl00$ContentPlaceHolder1$btnNext" value="Next">
+  </div>
+</div>
+</form>
+
+<script>
+// Simulated ASP.NET __doPostBack: the dependent panel is rebuilt server-side style,
+// with a delay, and its nodes are replaced (stale references break).
+(function () {
+  var ddl = document.getElementById('ctl00_ContentPlaceHolder1_ddlPassportCountry');
+  var pnl = document.getElementById('ctl00_ContentPlaceHolder1_pnlPassportDetails');
+  var html = pnl.innerHTML;
+  ddl.addEventListener('change', function () {
+    document.getElementById('__EVENTTARGET').value = 'ctl00$ContentPlaceHolder1$ddlPassportCountry';
+    pnl.style.display = 'none';
+    pnl.textContent = '';
+    if (!ddl.value) return;
+    setTimeout(function () {
+      // ponytail: innerHTML of a page-owned constant, not of data. Mirrors a WebForms panel refresh.
+      pnl.innerHTML = html;
+      pnl.style.display = '';
+    }, 500 + Math.floor(Math.random() * 1001));
+  });
+})();
+</script>
+</body>
+</html>

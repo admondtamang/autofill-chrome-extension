@@ -1,0 +1,56 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Plain Form Fixture</title>
+<style>body{font:14px/1.5 system-ui;max-width:640px;margin:2rem auto;padding:0 1rem}label{display:block;margin:.75rem 0 .2rem;font-weight:600}input,select,textarea{width:100%;padding:.4rem;box-sizing:border-box}fieldset{margin-top:1rem}</style>
+
+<h1>Plain Personal Details</h1>
+<p>Baseline fixture: native inputs only, no framework, no postback.</p>
+
+<form id="plain-form" onsubmit="return false">
+  <label for="given">Given name</label>
+  <input type="text" id="given" name="given" autocomplete="off">
+
+  <label for="family">Family name</label>
+  <input type="text" id="family" name="family" autocomplete="off">
+
+  <label for="email">Email address</label>
+  <input type="text" id="email" name="email" autocomplete="off">
+
+  <label for="phone">Phone</label>
+  <input type="text" id="phone" name="phone" autocomplete="off">
+
+  <!-- deliberately type=text, not type=date: site expects dd/MM/yyyy -->
+  <label for="dob">Date of birth (dd/mm/yyyy)</label>
+  <input type="text" id="dob" name="dob" placeholder="dd/mm/yyyy" autocomplete="off">
+
+  <!-- MUST be matched by option LABEL: values are opaque codes -->
+  <label for="country">Country of citizenship</label>
+  <select id="country" name="country">
+    <option value="">-- select --</option>
+    <option value="c-0041">Australia</option>
+    <option value="c-0372">India</option>
+    <option value="c-0918">Ireland</option>
+    <option value="c-0577">Nepal</option>
+    <option value="c-0103">New Zealand</option>
+  </select>
+
+  <!-- MUST be matched by option VALUE: value text equals the payload string -->
+  <label for="visaType">Current visa</label>
+  <select id="visaType" name="visaType">
+    <option value="">-- select --</option>
+    <option value="Student (500)">Student visa, subclass 500</option>
+    <option value="Visitor (600)">Visitor visa, subclass 600</option>
+    <option value="Bridging A (010)">Bridging visa A, subclass 010</option>
+  </select>
+
+  <fieldset>
+    <legend>Applying from</legend>
+    <label><input type="radio" name="applyFrom" value="Onshore"> Onshore (in Australia)</label>
+    <label><input type="radio" name="applyFrom" value="Offshore"> Offshore (outside Australia)</label>
+  </fieldset>
+
+  <label><input type="checkbox" id="usingAgent" name="usingAgent"> A migration agent is assisting this application</label>
+
+  <label for="residential">Residential address</label>
+  <textarea id="residential" name="residential" rows="3"></textarea>
+</form>

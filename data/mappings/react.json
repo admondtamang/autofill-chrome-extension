@@ -1,0 +1,10 @@
+{
+  "formKey": "fixture-react",
+  "version": 1,
+  "pageMatch": { "host": "localhost:5174", "urlIncludes": "/react.html", "headingText": "React Controlled Inputs" },
+  "fields": [
+    { "path": "name.given", "selector": "#r-given", "type": "text", "required": true },
+    { "path": "name.family", "selector": "#r-family", "type": "text", "required": true },
+    { "path": "citizenship.code", "selector": "#r-citizenship", "fallbackLabel": "Country of citizenship", "type": "select", "required": true }
+  ]
+}

@@ -1,0 +1,90 @@
+[
+  {
+    "personRef": { "type": "lead", "id": 1001 },
+    "name": { "given": "Complete", "middle": "Test", "family": "Applicant" },
+    "dob": "1994-03-15",
+    "contact": { "email": "complete.applicant@example.test", "phone": "+61400000001" },
+    "passport": { "number": "PA1234567", "issued": "2022-01-10", "expires": "2032-01-09" },
+    "citizenship": { "code": "NPL", "label": "Nepal" },
+    "currentVisa": { "type": "Student (500)", "expires": "2027-02-28" },
+    "address": { "residential": "1 Test Street, Sydney NSW 2000" },
+    "location": "Onshore",
+    "employment": { "occupation": "Software Engineer" },
+    "education": { "highest": "Bachelor of IT" },
+    "serviceTypes": ["Visa"],
+    "addressHistory": [
+      { "street": "1 Test Street", "city": "Sydney", "country": "Australia", "from": "2021-06-01", "to": "2026-09-01" },
+      { "street": "42 Example Road", "city": "Kathmandu", "country": "Nepal", "from": "2014-01-01", "to": "2021-05-31" }
+    ]
+  },
+  {
+    "personRef": { "type": "lead", "id": 1002 },
+    "name": { "given": "Sparse", "middle": null, "family": "Applicant" },
+    "dob": null,
+    "contact": { "email": "sparse.applicant@example.test", "phone": null },
+    "passport": { "number": null, "issued": null, "expires": null },
+    "citizenship": { "code": null, "label": null },
+    "currentVisa": { "type": null, "expires": null },
+    "address": { "residential": null },
+    "location": null,
+    "employment": { "occupation": null },
+    "education": { "highest": null },
+    "serviceTypes": [],
+    "addressHistory": []
+  },
+  {
+    "personRef": { "type": "student", "id": 1003 },
+    "name": {
+      "given": "Long",
+      "middle": "Maria Josephine Anne",
+      "family": "O'Connor-Fitzwilliam-Abernathy-Testington"
+    },
+    "dob": "2001-11-02",
+    "contact": { "email": "long.name.applicant@example.test", "phone": "+61400000003" },
+    "passport": { "number": "TEST889900", "issued": "2023-04-01", "expires": "2033-03-31" },
+    "citizenship": { "code": "IRL", "label": "Ireland" },
+    "currentVisa": { "type": "Student (500)", "expires": "2028-06-30" },
+    "address": { "residential": "Unit 12B, 900 Example Parade, Melbourne VIC 3000" },
+    "location": "Onshore",
+    "employment": { "occupation": "Research Assistant" },
+    "education": { "highest": "Master of Applied Linguistics and Comparative Literature" },
+    "serviceTypes": ["Education", "Visa"],
+    "addressHistory": [
+      { "street": "900 Example Parade", "city": "Melbourne", "country": "Australia", "from": "2023-02-01", "to": null }
+    ]
+  },
+  {
+    "personRef": { "type": "visa", "id": 1004 },
+    "name": { "given": "Zoé", "middle": "आदित्य", "family": "Núñez-श्रेष्ठ" },
+    "dob": "1988-07-21",
+    "contact": { "email": "unicode.applicant@example.test", "phone": "+9779800000004" },
+    "passport": { "number": "PA0099887", "issued": "2020-09-15", "expires": "2030-09-14" },
+    "citizenship": { "code": "NPL", "label": "Nepal" },
+    "currentVisa": { "type": "Visitor (600)", "expires": "2026-12-31" },
+    "address": { "residential": "काठमाडौं, Ward 5, Kathmandu" },
+    "location": "Offshore",
+    "employment": { "occupation": "Chef de Partie" },
+    "education": { "highest": "Diplôme d'Études" },
+    "serviceTypes": ["Visa"],
+    "addressHistory": [
+      { "street": "Ward 5 Marg", "city": "काठमाडौं", "country": "Nepal", "from": "2015-03-01", "to": null }
+    ]
+  },
+  {
+    "personRef": { "type": "skill-assessment", "id": 1005 },
+    "name": { "given": "Invalid", "middle": "Passport", "family": "Applicant" },
+    "dob": "1979-02-28",
+    "contact": { "email": "invalid.passport@example.test", "phone": "+61400000005" },
+    "passport": { "number": null, "issued": "2010-01-01", "expires": "2020-01-01" },
+    "citizenship": { "code": "IND", "label": "India" },
+    "currentVisa": { "type": "Bridging A (010)", "expires": "2019-05-01" },
+    "address": { "residential": "7 Expired Lane, Brisbane QLD 4000" },
+    "location": "Onshore",
+    "employment": { "occupation": "Motor Mechanic" },
+    "education": { "highest": "Certificate III in Automotive" },
+    "serviceTypes": ["Skill Assessment"],
+    "addressHistory": [
+      { "street": "7 Expired Lane", "city": "Brisbane", "country": "Australia", "from": "2009-01-01", "to": "2020-01-01" }
+    ]
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "formKey": "immi-personal-details",
+  "version": 1,
+  "pageMatch": { "host": "localhost:5174", "urlIncludes": "/immi-saved/", "headingText": "Personal details" },
+  "fields": [
+    { "path": "name.family", "selector": "#ctl00_ContentPlaceHolder1_txtFamilyName", "fallbackLabel": "Family name", "type": "text", "required": true },
+    { "path": "name.given", "selector": "#ctl00_ContentPlaceHolder1_txtGivenNames", "fallbackLabel": "Given names", "type": "text", "required": true },
+    { "path": "dob", "selector": "#ctl00_ContentPlaceHolder1_txtDateOfBirth", "fallbackLabel": "Date of birth", "type": "date", "format": "dd/MM/yyyy", "required": true },
+    { "path": "contact.email", "selector": "#ctl00_ContentPlaceHolder1_txtEmail", "fallbackLabel": "Email address", "type": "text", "required": false },
+    { "path": "contact.phone", "selector": "#ctl00_ContentPlaceHolder1_txtPhone", "fallbackLabel": "Mobile phone number", "type": "text", "required": false },
+    { "path": "citizenship.label", "selector": "#ctl00_ContentPlaceHolder1_ddlPassportCountry", "fallbackLabel": "Country of passport", "type": "select", "waitAfterMs": 2500, "required": true },
+    { "path": "passport.number", "selector": "#ctl00_ContentPlaceHolder1_txtPassportNumber", "fallbackLabel": "Passport number", "type": "text", "required": true },
+    { "path": "passport.issued", "selector": "#ctl00_ContentPlaceHolder1_txtPassportIssue", "fallbackLabel": "Date of issue", "type": "date", "format": "dd/MM/yyyy", "required": false },
+    { "path": "passport.expires", "selector": "#ctl00_ContentPlaceHolder1_txtPassportExpiry", "fallbackLabel": "Date of expiry", "type": "date", "format": "dd/MM/yyyy", "required": false },
+    { "path": "address.residential", "selector": "#ctl00_ContentPlaceHolder1_txtResidentialAddress", "fallbackLabel": "Residential address", "type": "text", "required": false },
+    { "path": "location", "selector": "input[name=\"ctl00$ContentPlaceHolder1$rblLocation\"][value=\"{value}\"]", "type": "radio", "required": false }
+  ]
+}
