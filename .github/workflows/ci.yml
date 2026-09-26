@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+    tags: ['ext-v*']
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '11'
+
+jobs:
+  # Required, non-skippable: no path filters, no `if`, no continue-on-error.
+  synthetic-data:
+    name: synthetic-data check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: node scripts/check-synthetic.mjs
+
+  checks:
+    name: typecheck / lint / unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: typecheck
+        run: pnpm exec wxt prepare && pnpm exec tsc --noEmit
+      # lint is the same `tsc --noEmit` in this repo; kept as its own step so adding a
+      # real linter later is a one-line change.
+      - name: lint
+        run: pnpm exec tsc --noEmit
+      - name: unit tests
+        run: pnpm exec vitest run
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: detect playwright config
+        id: detect
+        run: |
+          if [ -f playwright.config.ts ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::playwright.config.ts absent — skipping E2E"
+          fi
+      - name: install browsers
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - name: build extension
+        if: steps.detect.outputs.present == 'true'
+        run: pnpm exec wxt build --mode development
+      # The extension needs a headed Chrome; xvfb supplies the display.
+      - name: run e2e
+        if: steps.detect.outputs.present == 'true'
+        run: xvfb-run -a pnpm exec playwright test
+      - name: upload report
+        if: always() && steps.detect.outputs.present == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release:
+    name: prod zip
+    needs: [synthetic-data, checks]
+    if: startsWith(github.ref, 'refs/tags/ext-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec wxt zip --mode production
+      - uses: actions/upload-artifact@v4
+        with:
+          name: immifill-${{ github.ref_name }}
+          path: .output/*.zip
+          if-no-files-found: error

@@ -325,6 +325,53 @@ describe('safety (CONTRACTS §8)', () => {
     expect(isUnsafe(el('#safe'))).toBe(false);
   });
 
+  it('refuses submit-shaped elements regardless of their wording (H1 structural gate)', () => {
+    document.body.innerHTML = `
+      <form id="f2">
+        <button id="defaulted">Zebra</button>
+        <input type="image" id="img" src="x.png" alt="Zebra">
+        <input type="submit" id="sub" value="Zebra">
+        <button type="submit" id="btnsub">Zebra</button>
+        <button type="button" id="fa" formaction="/lodge">Zebra</button>
+        <input type="text" id="fm" formmethod="post">
+        <input type="text" id="harmless" name="givenName">
+      </form>
+      <button id="loose">Zebra</button>`;
+    for (const sel of ['#f2', '#defaulted', '#img', '#sub', '#btnsub', '#fa', '#fm', '#loose']) {
+      expect(isUnsafe(el(sel)), sel).toBe(true);
+    }
+    expect(isUnsafe(el('#harmless'))).toBe(false);
+  });
+
+  it('refuses the wider submit/consent vocabulary (H1), ImmiAccount "Lodge" included', () => {
+    const words = [
+      'Lodge application',
+      'Confirm',
+      'I agree to the terms',
+      'Accept',
+      'Proceed',
+      'Acknowledge',
+      'Finish',
+      'Complete',
+      'OK',
+      'Send',
+      'Save',
+      'Apply',
+      'Consent',
+    ];
+    document.body.innerHTML = words
+      .map((w, i) => `<button type="button" id="w${i}">${w}</button>`)
+      .join('');
+    words.forEach((w, i) => expect(isUnsafe(el(`#w${i}`)), w).toBe(true));
+
+    // Word-boundary matching: ordinary field wording must still be fillable.
+    document.body.innerHTML = `
+      <label id="l1">Applicant given name<input type="text" id="ok1"></label>
+      <label id="l2">Bangkok<input type="text" id="ok2"></label>`;
+    expect(isUnsafe(el('#ok1'))).toBe(false);
+    expect(isUnsafe(el('#ok2'))).toBe(false);
+  });
+
   it('never writes to a declaration checkbox even when a mapping points at one', async () => {
     const spy = vi.fn();
     el('#next').addEventListener('click', spy);

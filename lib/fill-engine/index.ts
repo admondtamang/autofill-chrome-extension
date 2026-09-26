@@ -73,6 +73,8 @@ async function fillOne(
     return { path, status: 'rejected', detail: rejectReason(el, value) };
   }
   highlight(el, 'filled');
+  // Armed AFTER the write: waitAfterMs waits for the page's own async postback,
+  // so our write's mutation must not be what starts the quiet countdown.
   if (field.waitAfterMs) await waitStable(400, field.waitAfterMs);
   return { path, status: 'filled' };
 }
@@ -98,8 +100,9 @@ async function fillGroup(field: FieldMapping, data: ApplicantPayload): Promise<F
         results.push({ path, status: 'not_found', detail: 'add button unavailable' });
         continue;
       }
+      const settling = waitStable(); // armed before the click, same reason as fillOne
       add.click();
-      await waitStable();
+      await settling;
     }
     const row = document.querySelectorAll(rowSelector)[i];
     if (!row) {

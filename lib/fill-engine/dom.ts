@@ -26,13 +26,19 @@ export function fireEvents(el: Element): void {
   for (const t of ['input', 'change', 'blur']) el.dispatchEvent(new Event(t, { bubbles: true }));
 }
 
+/**
+ * Resolves once the DOM has changed and then gone quiet for `quietMs`, or after
+ * `maxMs` regardless. The quiet countdown is deliberately NOT armed up front: a
+ * postback that re-renders later than `quietMs` would otherwise resolve this
+ * before the dependent section exists, and every field in it reports not_found.
+ */
 export const waitStable = (quietMs = 400, maxMs = 5000): Promise<void> =>
   new Promise<void>((resolve) => {
-    let quiet: number;
+    let quiet: ReturnType<typeof setTimeout> | undefined; // bare setTimeout: `window` is undefined inside the observer callback
     const hard = setTimeout(done, maxMs);
     const obs = new MutationObserver(() => {
       clearTimeout(quiet);
-      quiet = window.setTimeout(done, quietMs);
+      quiet = setTimeout(done, quietMs);
     });
     function done() {
       obs.disconnect();
@@ -41,7 +47,6 @@ export const waitStable = (quietMs = 400, maxMs = 5000): Promise<void> =>
       resolve();
     }
     obs.observe(document.body, { childList: true, subtree: true, attributes: true });
-    quiet = window.setTimeout(done, quietMs);
   });
 
 /** '{value}' is substituted before querying — radios select themselves by value. */
