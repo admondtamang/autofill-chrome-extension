@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import type { PanelResponses } from '@/lib/messages';
-import type { FillReport as Report, PersonSummary } from '@/lib/schema';
+import type { FieldResult, FillReport as Report, PersonSummary } from '@/lib/schema';
 import { FillReport } from './FillReport';
 import { PageStatus } from './PageStatus';
 import { PersonSearch } from './PersonSearch';
 import { RecordMode } from './RecordMode';
 import { LoginForm, SessionBar } from './SignIn';
-import { onTabChanged, onUnauthorized, send } from './messaging';
+import { onPaletteDrop, onTabChanged, onUnauthorized, send } from './messaging';
 import './style.css';
 
 export function App() {
@@ -32,6 +32,12 @@ export function App() {
   const [report, setReport] = useState<Report | null>(null);
   const [filling, setFilling] = useState(false);
   const [fillError, setFillError] = useState<string | null>(null);
+
+  const [palette, setPalette] = useState(false);
+  const [paletteBusy, setPaletteBusy] = useState(false);
+  const [paletteError, setPaletteError] = useState<string | null>(null);
+  // Manual drops land in the fill report like any other field — paths only (§8.3).
+  const [drops, setDrops] = useState<FieldResult[]>([]);
 
   const [canUndo, setCanUndo] = useState(false);
   const [undoing, setUndoing] = useState(false);
@@ -92,10 +98,22 @@ export function App() {
     void detect();
     return onTabChanged(() => {
       setReport(null);
+      setDrops([]);
       setCanUndo(false);
+      // The content script drops the palette on navigation and tab hide (§11).
+      setPalette(false);
       void detect();
     });
   }, [detect]);
+
+  useEffect(
+    () =>
+      onPaletteDrop((result) => {
+        setDrops((prev) => [...prev, result]);
+        if (result.status === 'filled') setCanUndo(true);
+      }),
+    [],
+  );
 
   // Pre-flight: which required values does this person lack on this form?
   useEffect(() => {
@@ -165,6 +183,35 @@ export function App() {
     }
   };
 
+  const togglePalette = async (): Promise<void> => {
+    const on = !palette;
+    setPaletteBusy(true);
+    const res = await send(
+      on && person !== null
+        ? { kind: 'PALETTE', on, type: person.personRef.type, personId: person.personRef.id }
+        : { kind: 'PALETTE', on: false },
+    );
+    setPaletteBusy(false);
+    if (!res.ok) {
+      setPaletteError(res.error);
+      return;
+    }
+    setPaletteError(null);
+    setPalette(res.data.on);
+  };
+
+  // Re-open with the new person's values whenever the selection changes.
+  useEffect(() => {
+    if (!palette || person === null) return;
+    void send({
+      kind: 'PALETTE',
+      on: true,
+      type: person.personRef.type,
+      personId: person.personRef.id,
+    });
+    // `palette` is deliberately not a dependency: this reacts to the person.
+  }, [person]);
+
   const undo = async (): Promise<void> => {
     setUndoing(true);
     const res = await send({ kind: 'UNDO' });
@@ -174,8 +221,20 @@ export function App() {
       return;
     }
     setUndoNote(`Restored ${res.data.restored} field(s).`);
+    setDrops([]);
     setCanUndo(false);
   };
+
+  // Drops are appended to whatever the last fill reported, so one list shows both.
+  const withDrops: Report | null =
+    report === null && drops.length === 0
+      ? null
+      : {
+          formKey: report?.formKey ?? detection?.formKey ?? '',
+          mappingVersion: report?.mappingVersion ?? detection?.mappingVersion ?? 0,
+          results: [...(report?.results ?? []), ...drops],
+          snapshot: report?.snapshot ?? [],
+        };
 
   const blocked =
     person === null
@@ -288,7 +347,31 @@ export function App() {
         )}
       </section>
 
-      <FillReport report={report} busy={filling} error={fillError} />
+      <section class="card">
+        <div class="card__head">
+          <h2 class="section">Value palette</h2>
+          <button
+            class="small"
+            data-testid="palette-toggle"
+            aria-pressed={palette}
+            disabled={paletteBusy || (person === null && !palette)}
+            title={person === null ? 'Select a person first.' : 'Drag values onto the form'}
+            onClick={() => void togglePalette()}
+          >
+            {paletteBusy ? 'Working…' : palette ? 'Hide palette' : 'Show palette'}
+          </button>
+        </div>
+        <p class="hint" data-testid="palette-status">
+          {person === null
+            ? 'Select a person first.'
+            : palette
+              ? 'Palette open on the page — drag a value onto the field it belongs in.'
+              : 'Show the palette to place individual values by hand. Values stay masked.'}
+        </p>
+        {paletteError !== null && <p class="error" role="alert">{paletteError}</p>}
+      </section>
+
+      <FillReport report={withDrops} busy={filling} error={fillError} />
 
       <RecordMode />
     </main>

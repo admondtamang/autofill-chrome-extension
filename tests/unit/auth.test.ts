@@ -97,6 +97,7 @@ vi.mock('@/entrypoints/sidepanel/messaging', () => ({
     };
   },
   onFieldCaptured: () => () => {},
+  onPaletteDrop: () => () => {},
 }));
 
 // Preact schedules effects on rAF, so a microtask tick is not enough.

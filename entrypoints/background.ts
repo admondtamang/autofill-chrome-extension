@@ -1,17 +1,20 @@
 import { dataSource } from '@/lib/data';
 import { UnauthorizedError } from '@/lib/data/errors';
 import { preflight } from '@/lib/fill-engine';
+import { getPath } from '@/lib/fill-engine/format';
 import {
   err,
   isMessage,
   ok,
   type ContentMessage,
   type ContentResponses,
+  type PaletteDropMsg,
+  type PaletteValue,
   type PanelMessage,
   type PanelResponses,
   type Result,
 } from '@/lib/messages';
-import type { ApplicantPayload, FieldStatus, FormMapping } from '@/lib/schema';
+import { FieldResult, type ApplicantPayload, type FieldStatus, type FormMapping } from '@/lib/schema';
 import type { Session } from '@/lib/data/types';
 import { payloadPaths } from '@/lib/record';
 
@@ -118,10 +121,66 @@ const countStatuses = (
   return counts;
 };
 
+/* ── Value palette (CONTRACTS §11) ─────────────────────────────
+   The worker flattens the payload so the page never carries that logic, and
+   the labels are the agent's words, not the payload's dot paths. */
+
+type Row = readonly [path: string, label: string, kind: PaletteValue['kind']];
+
+const PALETTE_FIELDS: readonly Row[] = [
+  ['name.given', 'Given name', 'text'],
+  ['name.middle', 'Middle name', 'text'],
+  ['name.family', 'Family name', 'text'],
+  ['dob', 'Date of birth', 'date'],
+  ['contact.email', 'Email address', 'email'],
+  ['contact.phone', 'Phone number', 'text'],
+  ['passport.number', 'Passport number', 'text'],
+  ['passport.issued', 'Passport issue date', 'date'],
+  ['passport.expires', 'Passport expiry date', 'date'],
+  ['citizenship.label', 'Country of citizenship', 'text'],
+  ['citizenship.code', 'Citizenship code', 'text'],
+  ['currentVisa.type', 'Current visa', 'text'],
+  ['currentVisa.expires', 'Current visa expiry', 'date'],
+  ['address.residential', 'Residential address', 'text'],
+  ['location', 'Onshore or offshore', 'text'],
+  ['employment.occupation', 'Occupation', 'text'],
+  ['education.highest', 'Highest education', 'text'],
+  ['serviceTypes', 'Service types', 'text'],
+];
+
+const PALETTE_ROW_FIELDS: readonly Row[] = [
+  ['street', 'street', 'text'],
+  ['city', 'city', 'text'],
+  ['country', 'country', 'text'],
+  ['from', 'from', 'date'],
+  ['to', 'to', 'date'],
+];
+
+/** CONTRACTS §11.5 — Array<{ path, label, value, kind }>, empties dropped. */
+function flattenPayload(p: ApplicantPayload): PaletteValue[] {
+  const out: PaletteValue[] = [];
+  const push = (path: string, label: string, kind: PaletteValue['kind'], raw: unknown): void => {
+    const value = Array.isArray(raw)
+      ? raw.join(', ')
+      : raw === null || raw === undefined
+        ? ''
+        : String(raw);
+    if (value !== '') out.push({ path, label, value, kind });
+  };
+  for (const [path, label, kind] of PALETTE_FIELDS) push(path, label, kind, getPath(p, path));
+  p.addressHistory.forEach((item, i) => {
+    for (const [key, label, kind] of PALETTE_ROW_FIELDS) {
+      // §9.1: the literal index, exactly as the fill report renders it.
+      push(`addressHistory[${i}].${key}`, `Address ${i + 1} — ${label}`, kind, getPath(item, key));
+    }
+  });
+  return out;
+}
+
 const PANEL_KINDS: ReadonlySet<string> = new Set<PanelMessage['kind']>([
   'SEARCH', 'DETECT', 'PREFLIGHT', 'FILL', 'UNDO',
   'ENABLE_SITE', 'RECORD_MODE', 'RECORD_GET', 'PAYLOAD_PATHS',
-  'LOGIN', 'LOGOUT', 'SESSION',
+  'LOGIN', 'LOGOUT', 'SESSION', 'PALETTE',
 ]);
 
 /* ── Router ────────────────────────────────────────────────────────── */
@@ -212,6 +271,23 @@ export async function route(msg: PanelMessage): Promise<Result<PanelResponses[Pa
     case 'PAYLOAD_PATHS':
       return ok(payloadPaths());
 
+    case 'PALETTE': {
+      const { id } = await activeTab();
+      if (!msg.on) return ok(await toTab(id, { kind: 'SHOW_PALETTE', on: false }));
+      if (msg.type === undefined || msg.personId === undefined) return err('Select a person first.');
+      // Same custody as every other route (§8.2): the payload is held only long
+      // enough to flatten it. From there the content script owns the values,
+      // under the §11 amendment's own close / navigate / hide / 60s budget.
+      const payload = holdPayload(await dataSource.getPayload(msg.type, msg.personId));
+      let values: PaletteValue[];
+      try {
+        values = flattenPayload(payload);
+      } finally {
+        releasePayload();
+      }
+      return ok(await toTab(id, { kind: 'SHOW_PALETTE', on: true, values }));
+    }
+
     case 'LOGIN': {
       // `password` is passed straight through and never stored, logged or
       // echoed back — not even into an error message.
@@ -241,9 +317,18 @@ export default defineBackground(() => {
     .catch((e: unknown) => console.error('[immifill] sidePanel behavior', e));
 
   chrome.runtime.onMessage.addListener((raw, sender, sendResponse) => {
+    if (!isMessage(raw)) return false;
+    // A manual drop (§11.5). Re-broadcast so it reaches the side panel's fill
+    // report; FieldResult.parse keeps anything but a path/status/detail out.
+    if (raw.kind === 'PALETTE_DROP' && sender.tab) {
+      const msg: PaletteDropMsg = { kind: 'PALETTE_DROP', result: FieldResult.parse(raw.result) };
+      void chrome.runtime.sendMessage(msg).catch(() => {});
+      sendResponse(ok({ ok: true } as const));
+      return false;
+    }
     // Content-script broadcasts (RECORD_FIELD_CAPTURED) pass straight through
     // to the side panel; only panel→worker messages are routed here.
-    if (!isMessage(raw) || sender.tab || !PANEL_KINDS.has(raw.kind)) return false;
+    if (sender.tab || !PANEL_KINDS.has(raw.kind)) return false;
     route(raw as PanelMessage)
       // Any UnauthorizedError from any route surfaces verbatim so the panel
       // can show the login form instead of a generic failure (§10.2).
