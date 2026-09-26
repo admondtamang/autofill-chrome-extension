@@ -20,20 +20,15 @@ const labelFor = (el: Fillable): string | undefined => {
 /**
  * Capture-phase click listener that turns a clicked control into a mapping draft.
  * `path` is left empty: the side panel picks it from payloadPaths().
- * ponytail: content.ts calls startRecording(paths, cb) — the dropdown paths are
- * the panel's business, so they are accepted and ignored here.
  */
-export function startRecording(onCapture: Capture): () => void;
-export function startRecording(paths: string[], onCapture: Capture): () => void;
-export function startRecording(a: string[] | Capture, b?: Capture): () => void {
-  const onCapture = typeof a === 'function' ? a : b;
-
+export function startRecording(onCapture: Capture): () => void {
   const onClick = (ev: MouseEvent) => {
     const el = ev.target;
-    if (!isFillable(el) || isUnsafe(el)) return; // never capture submit/next/pay/declaration
-    ev.preventDefault();
+    if (!isFillable(el)) return;
+    ev.preventDefault(); // the click picks a field, it does not operate the form
     ev.stopPropagation();
-    onCapture?.({
+    if (isUnsafe(el)) return; // never capture submit/next/pay/declaration
+    onCapture({
       path: '',
       selector: stableSelector(el),
       fallbackLabel: labelFor(el),

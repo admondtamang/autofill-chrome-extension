@@ -37,7 +37,7 @@ export function onFieldCaptured(cb: (field: FieldMapping) => void): () => void {
 export function onTabChanged(cb: () => void): () => void {
   const tabs: typeof chrome.tabs | undefined = globalThis.chrome?.tabs;
   if (!tabs) return () => {};
-  const onUpdated = (_id: number, info: chrome.tabs.TabChangeInfo): void => {
+  const onUpdated = (_id: number, info: chrome.tabs.OnUpdatedInfo): void => {
     if (info.status === 'complete' || info.url !== undefined) cb();
   };
   tabs.onActivated.addListener(cb);

@@ -72,7 +72,7 @@ export default defineContentScript({
           stopRecording = null;
           if (msg.on) {
             captured = [];
-            stopRecording = startRecording(msg.paths, (field: FieldMapping) => {
+            stopRecording = startRecording((field: FieldMapping) => {
               captured.push(field);
               const broadcast: RecordFieldCapturedMsg = { kind: 'RECORD_FIELD_CAPTURED', field };
               void chrome.runtime.sendMessage(broadcast).catch(() => {});

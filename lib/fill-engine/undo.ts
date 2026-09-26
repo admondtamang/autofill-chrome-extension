@@ -6,9 +6,15 @@ type Snapshot = FillReport['snapshot'];
 const stripValueToken = (selector: string) =>
   selector.replace(/\[value=["']?\{value\}["']?\]/g, '');
 
+/** Members of a radio/checkbox group share a name, so each needs its own selector. */
+const checkableSelector = (el: HTMLInputElement): string => {
+  const base = stableSelector(el);
+  return base.startsWith('[name=') ? `${base}[value="${el.value.replace(/"/g, '\\"')}"]` : base;
+};
+
 const entryFor = (el: Fillable): Snapshot[number] =>
   el instanceof HTMLInputElement && (el.type === 'checkbox' || el.type === 'radio')
-    ? { selector: stableSelector(el), kind: 'checked', value: String(el.checked) }
+    ? { selector: checkableSelector(el), kind: 'checked', value: String(el.checked) }
     : { selector: stableSelector(el), kind: 'value', value: el.value };
 
 /**
@@ -40,10 +46,9 @@ export function restore(snapshot: Snapshot): number {
     const el = document.querySelector(entry.selector);
     if (!isFillable(el)) continue;
     if (entry.kind === 'checked') {
-      if (el instanceof HTMLInputElement) {
-        el.checked = entry.value === 'true';
-        setNative(el, el.value); // re-dispatch so React reverts too
-      }
+      if (!(el instanceof HTMLInputElement)) continue;
+      el.checked = entry.value === 'true';
+      setNative(el, el.value); // re-dispatch so React reverts too
     } else {
       setNative(el, entry.value);
     }
