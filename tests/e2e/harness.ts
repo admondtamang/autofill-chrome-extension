@@ -284,6 +284,21 @@ export class PanelClient {
     })()`);
   }
 
+  /**
+   * Picks a person through the real list. Waits for the *named* row rather than
+   * a row count: the previous query's list can also be one row long, and
+   * clicking it selects the wrong person.
+   */
+  async selectPerson(type: string, query: string, nameFragment: string): Promise<void> {
+    const want = JSON.stringify(nameFragment);
+    await this.setControl('entity-type', type, 'HTMLSelectElement');
+    await this.setControl('person-search', query);
+    const row = `[...document.querySelectorAll('[data-testid="person-result"]')].find((e) => e.innerText.includes(${want}))`;
+    await this.waitFor(row);
+    await this.eval(`void ${row}.click()`);
+    await this.waitFor(`document.querySelector('[data-testid="selected-person"]')?.innerText.includes(${want})`);
+  }
+
   texts(testid: string): Promise<string[]> {
     return this.eval(
       `Array.from(document.querySelectorAll('[data-testid="${testid}"]'), (e) => e.textContent.trim())`,
@@ -422,7 +437,7 @@ export async function launchApp(opts: LaunchOpts = {}): Promise<App> {
   };
 }
 
-export const test = base.extend<Record<string, never>, { app: App }>({
+export const test = base.extend<object, { app: App }>({
   app: [
     async ({}, use) => {
       const app = await launchApp();
