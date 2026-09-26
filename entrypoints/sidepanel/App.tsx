@@ -5,11 +5,19 @@ import { FillReport } from './FillReport';
 import { PageStatus } from './PageStatus';
 import { PersonSearch } from './PersonSearch';
 import { RecordMode } from './RecordMode';
-import { onTabChanged, send } from './messaging';
+import { LoginForm, SessionBar } from './SignIn';
+import { onTabChanged, onUnauthorized, send } from './messaging';
 import './style.css';
 
 export function App() {
   const [person, setPerson] = useState<PersonSummary | null>(null);
+
+  // null while the session is still being resolved. In static builds the worker
+  // answers `{ signedIn: true }`, so Phase 1 never sees a login wall (§10.1).
+  const [session, setSession] = useState<PanelResponses['SESSION'] | null>(null);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [expired, setExpired] = useState(false);
 
   const [detection, setDetection] = useState<PanelResponses['DETECT']>(null);
   const [detecting, setDetecting] = useState(true);
@@ -28,6 +36,43 @@ export function App() {
   const [canUndo, setCanUndo] = useState(false);
   const [undoing, setUndoing] = useState(false);
   const [undoNote, setUndoNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    void send({ kind: 'SESSION' }).then((res) =>
+      setSession(res.ok ? res.data : { signedIn: false }),
+    );
+    // Any route answering `unauthorized` drops us back to the login form.
+    return onUnauthorized(() => {
+      setSession({ signedIn: false });
+      setExpired(true);
+    });
+  }, []);
+
+  const signIn = async (email: string, password: string): Promise<void> => {
+    setAuthBusy(true);
+    const res = await send({ kind: 'LOGIN', email, password });
+    setAuthBusy(false);
+    // Runs after the onUnauthorized subscriber, so this wins: a rejected
+    // credential is a failed sign-in, not an expired session.
+    setExpired(false);
+    if (!res.ok) {
+      setAuthError(
+        res.error === 'unauthorized' ? 'Email or password not recognised.' : res.error,
+      );
+      return;
+    }
+    setAuthError(null);
+    setSession({ signedIn: true, user: res.data.user, expiry: res.data.expiry });
+  };
+
+  const signOut = async (): Promise<void> => {
+    setAuthBusy(true);
+    await send({ kind: 'LOGOUT' });
+    setAuthBusy(false);
+    setAuthError(null);
+    setExpired(false);
+    setSession({ signedIn: false });
+  };
 
   const detect = useCallback(async (): Promise<void> => {
     setDetecting(true);
@@ -134,9 +179,41 @@ export function App() {
         ? 'Unsupported page — no mapping matches this form.'
         : null;
 
+  if (session === null) {
+    return (
+      <main class="app">
+        <h1 class="app__title">ImmiFill</h1>
+        <p class="hint">Checking your session…</p>
+      </main>
+    );
+  }
+
+  if (!session.signedIn) {
+    return (
+      <main class="app">
+        <h1 class="app__title">ImmiFill</h1>
+        <LoginForm
+          busy={authBusy}
+          error={authError}
+          expired={expired}
+          onSubmit={(email, password) => void signIn(email, password)}
+        />
+      </main>
+    );
+  }
+
   return (
     <main class="app">
       <h1 class="app__title">ImmiFill</h1>
+
+      {session.user !== undefined && (
+        <SessionBar
+          user={session.user}
+          expiry={session.expiry}
+          busy={authBusy}
+          onSignOut={() => void signOut()}
+        />
+      )}
 
       <PageStatus
         detection={detection}

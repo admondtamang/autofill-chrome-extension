@@ -22,13 +22,27 @@ import { mkdtempSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { DEV_EMAIL, DEV_PASSWORD } from '@/mock-crm/server';
 import { ApplicantPayload, FormMapping } from '@/lib/schema';
 import type { FieldMapping, FieldStatus, FillReport } from '@/lib/schema';
 import { formatValue, isTruthy } from '@/lib/fill-engine/format';
 
+/** Both builds coexist: `wxt build -b api` writes to its own `.output` dir. */
+export const extDirFor = (mode: 'static' | 'api'): string =>
+  mode === 'api' ? '.output/api-mv3-dev' : '.output/chrome-mv3-dev';
+
 export const ROOT = resolve(import.meta.dirname, '../..');
-export const EXT_DIR = join(ROOT, '.output/chrome-mv3-dev');
 export const BASE_URL = 'http://localhost:5174';
+
+/**
+ * Phase 1 (`static`) and Phase 2 (`api`) run the SAME spec files. `IMMIFILL_MODE`
+ * picks which build is loaded and whether the run signs in first; every
+ * expectation below is shared, so a divergence is a real Phase 2 defect and not
+ * a forked assertion. See docs/DEMO.md "Phase 2".
+ */
+export const MODE: 'static' | 'api' = process.env.IMMIFILL_MODE === 'api' ? 'api' : 'static';
+export const CRM_BASE = process.env.WXT_CRM_BASE ?? 'http://localhost:5176';
+export const EXT_DIR = join(ROOT, extDirFor(MODE));
 
 /* ── Data read straight off disk, through the real schemas ───────────── */
 
@@ -268,6 +282,31 @@ export class PanelClient {
     return res.data;
   }
 
+  /**
+   * Signs in through the REAL login form: panel → `LOGIN` → service worker →
+   * `CrmApiDataSource.login()` → mock CRM. Nothing is stubbed.
+   */
+  async fillLogin(email: string, password: string): Promise<void> {
+    await this.waitFor(`document.querySelector('[data-testid="login-form"]')`);
+    await this.setControl('login-email', email);
+    await this.setControl('login-password', password);
+    await this.click('login-submit');
+  }
+
+  /** Same, but the sign-in must succeed; a rejection surfaces the panel's message. */
+  async signIn(email = DEV_EMAIL, password = DEV_PASSWORD): Promise<void> {
+    await this.fillLogin(email, password);
+    try {
+      // Waiting on the session bar alone, not "bar or error": App.tsx leaves a
+      // previous attempt's error on screen until the next one succeeds, so an
+      // `||` here would resolve instantly against a stale message.
+      await this.waitFor(`document.querySelector('[data-testid="session-bar"]')`);
+    } catch (e: unknown) {
+      const [error] = await this.texts('login-error');
+      throw new Error(error === undefined ? String(e) : `sign-in failed: ${error}`);
+    }
+  }
+
   click(testid: string, nth = 0): Promise<void> {
     return this.eval(
       `void document.querySelectorAll('[data-testid="${testid}"]')[${nth}].click()`,
@@ -343,7 +382,12 @@ export type App = {
   close(): Promise<void>;
 };
 
-export type LaunchOpts = { slowMo?: number; videoDir?: string };
+export type LaunchOpts = {
+  slowMo?: number;
+  videoDir?: string;
+  /** api mode only: skip the sign-in, leaving the panel on the login wall. */
+  signIn?: boolean;
+};
 
 async function devtoolsPort(userDataDir: string): Promise<number> {
   for (let i = 0; i < 100; i += 1) {
@@ -359,7 +403,28 @@ async function devtoolsPort(userDataDir: string): Promise<number> {
   throw new Error('Chromium never wrote DevToolsActivePort');
 }
 
+/**
+ * The dev manifest declares only the fixture origin plus
+ * `optional_host_permissions: ['<all_urls>']`, and the only runtime grant the
+ * product offers ("Enable on this site") grants the ACTIVE TAB's origin — the
+ * CRM is never a tab, so a dev build cannot reach `WXT_CRM_BASE` and every
+ * `fetch` dies as "Failed to fetch". The production manifest already declares
+ * the CRM host (`https://api.successedu.com.au/*`), so this adds the mock's
+ * origin to the loaded build to model production. Harness-only, idempotent;
+ * see docs/DEMO.md "What the mock does NOT prove" for the real fix.
+ */
+function ensureCrmHostPermission(): void {
+  const file = join(EXT_DIR, 'manifest.json');
+  const manifest = JSON.parse(readFileSync(file, 'utf8')) as { host_permissions?: string[] };
+  const origin = `${CRM_BASE}/*`;
+  const hosts = manifest.host_permissions ?? [];
+  if (hosts.includes(origin)) return;
+  manifest.host_permissions = [...hosts, origin];
+  writeFileSync(file, JSON.stringify(manifest, null, 2));
+}
+
 export async function launchApp(opts: LaunchOpts = {}): Promise<App> {
+  if (MODE === 'api') ensureCrmHostPermission();
   const userDataDir = mkdtempSync(join(tmpdir(), 'immifill-e2e-'));
   const context = await chromium.launchPersistentContext(userDataDir, {
     channel: 'chromium',
@@ -414,7 +479,25 @@ export async function launchApp(opts: LaunchOpts = {}): Promise<App> {
   const target = targets.find((t) => t.url.endsWith('/sidepanel.html'));
   if (!target) throw new Error('side panel target not found — sidePanel.open did not stick');
   const panel = await PanelClient.connect(target.webSocketDebuggerUrl);
-  await panel.waitFor(`document.querySelector('[data-testid="fill-button"]')`);
+
+  // Which build actually got loaded? `LOGOUT` answers `not supported` in a
+  // static build (CONTRACTS §10.1) and `ok` in an api one — so a stale or
+  // wrong-mode `.output` fails here instead of as a baffling timeout.
+  const probe = await panel.msg({ kind: 'LOGOUT' });
+  const built = probe.ok ? 'api' : 'static';
+  if (built !== MODE) {
+    throw new Error(
+      `${EXT_DIR} is a ${built}-mode build but IMMIFILL_MODE=${MODE} — rebuild with ` +
+        (MODE === 'api' ? '`pnpm build:api`' : '`pnpm build`'),
+    );
+  }
+
+  if (MODE === 'api' && opts.signIn === false) {
+    await panel.waitFor(`document.querySelector('[data-testid="login-form"]')`);
+  } else {
+    if (MODE === 'api') await panel.signIn();
+    await panel.waitFor(`document.querySelector('[data-testid="fill-button"]')`);
+  }
 
   await page.bringToFront();
 

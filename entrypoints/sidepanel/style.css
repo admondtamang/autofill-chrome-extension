@@ -117,6 +117,8 @@ label.field {
 
 input[type='text'],
 input[type='search'],
+input[type='email'],
+input[type='password'],
 select {
   width: 100%;
   max-width: 100%;

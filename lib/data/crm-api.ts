@@ -36,8 +36,18 @@ const CrmRow = z.object({
 });
 const CrmList = z.object({ rows: z.array(CrmRow) });
 
+/**
+ * Bundled mappings — the §10.3 fallback. Same glob (and same eager parse) as
+ * StaticDataSource, so a drifted file fails the bundle, not a live fill.
+ */
+const bundled: FormMapping[] = Object.values(
+  import.meta.glob('@/data/mappings/*.json', { eager: true, import: 'default' }),
+).map((m) => FormMapping.parse(m));
+
 export class CrmApiDataSource implements DataSource {
   private alarmBound = false;
+  /** In-memory only (§10.3): path -> last validated body + its ETag. */
+  private readonly mappingCache = new Map<string, { etag: string; value: unknown }>();
 
   constructor(private readonly base: string) {}
 
@@ -84,11 +94,21 @@ export class CrmApiDataSource implements DataSource {
   }
 
   listMappings(): Promise<MappingIndexEntry[]> {
-    return this.request('/immifill/mappings', z.array(MappingIndexEntry));
+    return this.mappings('/immifill/mappings', z.array(MappingIndexEntry), () =>
+      bundled.map((m) => MappingIndexEntry.parse(m)),
+    );
   }
 
   getMapping(formKey: string): Promise<FormMapping> {
-    return this.request(`/immifill/mappings/${encodeURIComponent(formKey)}`, FormMapping);
+    return this.mappings(
+      `/immifill/mappings/${encodeURIComponent(formKey)}`,
+      FormMapping,
+      () => {
+        const m = bundled.find((x) => x.formKey === formKey);
+        if (!m) throw new NotFoundError(`no mapping for ${formKey}`);
+        return FormMapping.parse(m);
+      },
+    );
   }
 
   async audit(entry: FillAudit): Promise<void> {
@@ -110,10 +130,41 @@ export class CrmApiDataSource implements DataSource {
     schema: z.ZodType<T>,
     init: RequestInit = {},
   ): Promise<T> {
+    const res = await this.send(path, init);
+    await this.check(path, res);
+    // 204 (audit) has no body to parse.
+    if (res.status === 204) return schema.parse(undefined);
+    return schema.parse(await res.json());
+  }
+
+  /**
+   * Mapping fetch with the §10.3 ETag cache and bundled fallback. Anything
+   * short of 401/404 — network error, 5xx, or a remote mapping that fails
+   * Zod — falls back to the bundled copy; a 401 is never masked by it.
+   */
+  private async mappings<T>(path: string, schema: z.ZodType<T>, fallback: () => T): Promise<T> {
+    const hit = this.mappingCache.get(path);
+    try {
+      const res = await this.send(path, hit ? { headers: { 'if-none-match': hit.etag } } : {});
+      // Already validated when it was cached: serve it without re-parsing.
+      if (res.status === 304 && hit) return hit.value as T;
+      await this.check(path, res);
+      const value = schema.parse(await res.json());
+      const etag = res.headers.get('etag');
+      if (etag) this.mappingCache.set(path, { etag, value });
+      else this.mappingCache.delete(path);
+      return value;
+    } catch (err) {
+      if (err instanceof UnauthorizedError || err instanceof NotFoundError) throw err;
+      return fallback();
+    }
+  }
+
+  private async send(path: string, init: RequestInit): Promise<Response> {
     const session = await this.session();
     if (!session) throw new UnauthorizedError('no session');
 
-    const res = await fetch(`${this.base}${path}`, {
+    return fetch(`${this.base}${path}`, {
       ...init,
       headers: {
         ...init.headers,
@@ -122,13 +173,15 @@ export class CrmApiDataSource implements DataSource {
         'content-type': 'application/json',
       },
     });
+  }
+
+  private async check(path: string, res: Response): Promise<void> {
     if (res.status === 401) {
       await this.clearSession();
       throw new UnauthorizedError();
     }
     if (res.status === 404) throw new NotFoundError(path);
     if (!res.ok) throw new Error(`${path} failed: ${res.status}`);
-    return schema.parse(await res.json());
   }
 
   private async session(): Promise<Session | null> {

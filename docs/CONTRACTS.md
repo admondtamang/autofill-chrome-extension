@@ -262,3 +262,77 @@ fallback path for `employment.occupation`; that is a pass, not a warning.
 
 And: after a fill of `traps.html`, `#declaration` must be unchecked, no navigation
 must have occurred, and `#next` / `#pay` must never have been clicked.
+
+---
+
+## 10. Phase 2 amendments — BINDING (added when Phase 2 was authorised)
+
+Phase 1 §1–§9 are unchanged. Nothing below may alter the fill engine: the PRD
+acceptance criterion "switching `WXT_DATA_SOURCE` touches no fill-engine code"
+still holds, and CI must keep proving it.
+
+### 10.1 Auth message protocol (extends §3)
+
+Side panel → service worker. Same `Result<T>` envelope; still never throw across a port.
+
+| kind | payload | response `data` |
+| --- | --- | --- |
+| `LOGIN` | `{ email, password }` | `{ user: { id, email }, expiry }` — **never the token** |
+| `LOGOUT` | `{}` | `{ ok: true }` |
+| `SESSION` | `{}` | `{ signedIn: boolean, user?: { id, email }, expiry?: string }` |
+
+**The token never crosses a port and is never sent to the side panel.** The panel
+learns only that a session exists, who it belongs to, and when it ends.
+`password` travels panel → worker once and is never stored, logged, or retained
+after the `fetch` resolves.
+
+In `static` mode `LOGIN`/`LOGOUT` return `{ ok: false, error: 'not supported' }`
+and `SESSION` returns `{ signedIn: true }` — Phase 1 has no auth and the panel
+must not show a login wall.
+
+### 10.2 Session lifecycle
+
+- Token lives ONLY in `chrome.storage.session` under `immifill.session`.
+- Cleared on: explicit logout, token expiry, and any `401` from any endpoint.
+- A `chrome.alarms` timer clears it 60s before `expiry`.
+- Any `UnauthorizedError` reaching the router is reported to the panel as
+  `{ ok: false, error: 'unauthorized' }` verbatim, so the panel can show the
+  login form rather than a generic failure.
+- Person payloads are STILL forbidden from `chrome.storage` (§8.1). The token is
+  the only thing permitted there.
+
+### 10.3 Mappings: ETag + bundled fallback
+
+`CrmApiDataSource.listMappings()` / `getMapping()`:
+1. Send `if-none-match` when a cached ETag exists. A `304` serves the cache.
+2. A `200` replaces the cache and stores the new ETag.
+3. On network failure, a non-2xx that is not 401/404, or a Zod parse failure,
+   **fall back to the bundled `data/mappings/*.json`** and keep working.
+4. A `401` is never masked by the fallback — it propagates as `UnauthorizedError`.
+
+The mapping cache is in-memory only. Mappings are not person data, but they are
+remote-controlled input: every one is `FormMapping.parse`d before use (§8.4), and
+a mapping that fails validation is discarded in favour of the bundled copy.
+
+**A remote mapping is untrusted input.** `isUnsafe()` (§8.5) is the control that
+stops a hostile `selector`/`addButtonSelector` reaching Submit. It runs on every
+resolved element regardless of data source — never bypass it for "our own" API.
+
+### 10.4 Mock CRM
+
+`WXT_CRM_BASE` points at any host implementing the routes below. A contract-faithful
+mock lives in `mock-crm/` and serves on **http://localhost:5176**, so the Phase 2
+E2E suite runs with no staging dependency.
+
+| Method + route | Returns |
+| --- | --- |
+| `POST /auth/login` | `{ token, expiry, user: { id, email } }`; `401` on bad creds |
+| `GET /{entityType}?q&order&order_by&limit` | `{ rows: [{ id, first_name, last_name, email, status }] }` |
+| `GET /immifill/payload/{type}/{id}` | an `ApplicantPayload`; `404` if absent |
+| `GET /immifill/mappings` | `MappingIndexEntry[]` + `ETag`; honours `if-none-match` → `304` |
+| `GET /immifill/mappings/{formKey}` | a `FormMapping` + `ETag`; `404` if absent |
+| `POST /immifill/audit` | `204`; the mock asserts the body carries counts only |
+
+Every route requires a bare `authorization: <token>` header — no `Bearer` prefix —
+and returns `401` without it. The mock serves the SAME synthetic people as
+`data/people.json`, so the Phase 2 E2E run asserts identical outcomes to Phase 1.

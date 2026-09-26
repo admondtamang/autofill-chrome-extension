@@ -1,4 +1,5 @@
 import { dataSource } from '@/lib/data';
+import { UnauthorizedError } from '@/lib/data/errors';
 import { preflight } from '@/lib/fill-engine';
 import {
   err,
@@ -11,6 +12,7 @@ import {
   type Result,
 } from '@/lib/messages';
 import type { ApplicantPayload, FieldStatus, FormMapping } from '@/lib/schema';
+import type { Session } from '@/lib/data/types';
 import { payloadPaths } from '@/lib/record';
 
 /* ── Applicant payload custody (CONTRACTS §8.2) ───────────────────────
@@ -34,6 +36,26 @@ function releasePayload(): void {
     clearTimeout(holdTimer);
     holdTimer = undefined;
   }
+}
+
+/* ── Session (CONTRACTS §10.1/§10.2) ──────────────────────────────────
+   The token lives only in chrome.storage.session; it never crosses a port.
+   The panel learns who is signed in and when the session ends, nothing more. */
+
+const SESSION_KEY = 'immifill.session';
+const IS_API = import.meta.env.WXT_DATA_SOURCE === 'api';
+const NOT_SUPPORTED = 'not supported';
+
+async function readSession(): Promise<Session | null> {
+  const stored = (await chrome.storage.session.get(SESSION_KEY))[SESSION_KEY] as
+    | Session
+    | undefined;
+  if (!stored) return null;
+  if (Date.parse(stored.expiry) <= Date.now()) {
+    await chrome.storage.session.remove(SESSION_KEY);
+    return null;
+  }
+  return stored;
 }
 
 /* ── Mapping cache ─────────────────────────────────────────────────── */
@@ -99,11 +121,12 @@ const countStatuses = (
 const PANEL_KINDS: ReadonlySet<string> = new Set<PanelMessage['kind']>([
   'SEARCH', 'DETECT', 'PREFLIGHT', 'FILL', 'UNDO',
   'ENABLE_SITE', 'RECORD_MODE', 'RECORD_GET', 'PAYLOAD_PATHS',
+  'LOGIN', 'LOGOUT', 'SESSION',
 ]);
 
 /* ── Router ────────────────────────────────────────────────────────── */
 
-async function route(msg: PanelMessage): Promise<Result<PanelResponses[PanelMessage['kind']]>> {
+export async function route(msg: PanelMessage): Promise<Result<PanelResponses[PanelMessage['kind']]>> {
   switch (msg.kind) {
     case 'SEARCH':
       return ok(await dataSource.search(msg.type, msg.q, { limit: msg.limit ?? 25 }));
@@ -188,6 +211,26 @@ async function route(msg: PanelMessage): Promise<Result<PanelResponses[PanelMess
 
     case 'PAYLOAD_PATHS':
       return ok(payloadPaths());
+
+    case 'LOGIN': {
+      // `password` is passed straight through and never stored, logged or
+      // echoed back — not even into an error message.
+      if (!IS_API || !dataSource.login) return err(NOT_SUPPORTED);
+      const { user, expiry } = await dataSource.login(msg.email, msg.password);
+      return ok({ user, expiry });
+    }
+
+    case 'LOGOUT': {
+      if (!IS_API) return err(NOT_SUPPORTED);
+      await chrome.storage.session.remove(SESSION_KEY);
+      return ok({ ok: true });
+    }
+
+    case 'SESSION': {
+      if (!IS_API) return ok({ signedIn: true }); // Phase 1 has no login wall.
+      const s = await readSession();
+      return s ? ok({ signedIn: true, user: s.user, expiry: s.expiry }) : ok({ signedIn: false });
+    }
   }
 }
 
@@ -202,7 +245,13 @@ export default defineBackground(() => {
     // to the side panel; only panel→worker messages are routed here.
     if (!isMessage(raw) || sender.tab || !PANEL_KINDS.has(raw.kind)) return false;
     route(raw as PanelMessage)
-      .catch((e: unknown) => err(e instanceof Error ? e.message : String(e)))
+      // Any UnauthorizedError from any route surfaces verbatim so the panel
+      // can show the login form instead of a generic failure (§10.2).
+      .catch((e: unknown) =>
+        e instanceof UnauthorizedError
+          ? err('unauthorized')
+          : err(e instanceof Error ? e.message : String(e)),
+      )
       .then(sendResponse);
     return true; // async response
   });

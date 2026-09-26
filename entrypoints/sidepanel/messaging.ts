@@ -7,6 +7,16 @@ const runtime: typeof chrome.runtime | undefined = globalThis.chrome?.runtime;
 
 const NO_RUNTIME = 'Extension runtime unavailable — open this panel from the ImmiFill toolbar icon.';
 
+/** Fires whenever any call comes back `unauthorized` (CONTRACTS §10.2). */
+const unauthorizedSubs = new Set<() => void>();
+
+export function onUnauthorized(cb: () => void): () => void {
+  unauthorizedSubs.add(cb);
+  return () => {
+    unauthorizedSubs.delete(cb);
+  };
+}
+
 /** Typed wrapper around chrome.runtime.sendMessage — never throws. */
 export async function send<K extends PanelMessage['kind']>(
   msg: Extract<PanelMessage, { kind: K }>,
@@ -15,7 +25,11 @@ export async function send<K extends PanelMessage['kind']>(
   try {
     const res: unknown = await runtime.sendMessage(msg);
     if (res && typeof res === 'object' && 'ok' in res) {
-      return res as Result<PanelResponses[K]>;
+      const out = res as Result<PanelResponses[K]>;
+      if (!out.ok && out.error === 'unauthorized') {
+        for (const cb of unauthorizedSubs) cb();
+      }
+      return out;
     }
     return { ok: false, error: 'No response from the service worker.' };
   } catch (e: unknown) {

@@ -15,7 +15,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
+    "build:api": "WXT_DATA_SOURCE=api WXT_CRM_BASE=http://localhost:5176 wxt build -b api --mode development",
+    "e2e:api": "pnpm build:api && IMMIFILL_MODE=api playwright test",
     "demo": "IMMIFILL_DEMO=1 playwright test tests/e2e/demo.spec.ts",
+    "mock-crm": "node mock-crm/server.ts",
     "fixtures": "vite fixtures --host localhost --port 5174 --strictPort",
     "fixtures:alt": "vite fixtures --host 127.0.0.1 --port 5175 --strictPort",
     "check:synthetic": "node scripts/check-synthetic.mjs"

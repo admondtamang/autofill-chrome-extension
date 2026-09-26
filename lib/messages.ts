@@ -21,6 +21,12 @@ export type EnableSiteMsg = { kind: 'ENABLE_SITE' };
 export type RecordModeMsg = { kind: 'RECORD_MODE'; on: boolean };
 export type RecordGetMsg = { kind: 'RECORD_GET' };
 export type PayloadPathsMsg = { kind: 'PAYLOAD_PATHS' };
+export type LoginMsg = { kind: 'LOGIN'; email: string; password: string };
+export type LogoutMsg = { kind: 'LOGOUT' };
+export type SessionMsg = { kind: 'SESSION' };
+
+/** What the panel may know about a session — never the token (CONTRACTS §10.1). */
+export type SessionUser = { id: number; email: string };
 
 export type PanelMessage =
   | SearchMsg
@@ -31,7 +37,10 @@ export type PanelMessage =
   | EnableSiteMsg
   | RecordModeMsg
   | RecordGetMsg
-  | PayloadPathsMsg;
+  | PayloadPathsMsg
+  | LoginMsg
+  | LogoutMsg
+  | SessionMsg;
 
 export interface PanelResponses {
   SEARCH: PersonSummary[];
@@ -43,6 +52,9 @@ export interface PanelResponses {
   RECORD_MODE: { on: boolean };
   RECORD_GET: FormMapping;
   PAYLOAD_PATHS: string[];
+  LOGIN: { user: SessionUser; expiry: string };
+  LOGOUT: { ok: true };
+  SESSION: { signedIn: boolean; user?: SessionUser; expiry?: string };
 }
 
 /* ── Service worker → content script (chrome.tabs.sendMessage) ────────── */
