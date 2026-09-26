@@ -105,6 +105,11 @@ export function App() {
       return;
     }
     let live = true;
+    // Clear first: holding the previous person's verdict while this one is in
+    // flight would attribute "all required values are present" to someone who
+    // is actually missing them.
+    setMissing(null);
+    setPreflightError(null);
     void send({
       kind: 'PREFLIGHT',
       type: person.personRef.type,

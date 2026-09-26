@@ -50,7 +50,11 @@ test('ImmiFill Phase 1 — watchable demo', async () => {
 
     /* ── 2. Pre-flight on the person who is missing required values ─── */
     await app.panel.selectPerson('lead', 'Sparse', displayName(sparse));
-    await app.panel.waitFor(`document.querySelector('[data-testid="preflight"]')`);
+    // Wait for the missing ROWS, not just the container: the container is still
+    // present from the previous person, so waiting on it screenshots a stale verdict.
+    await app.panel.waitFor(
+      `document.querySelectorAll('[data-testid="preflight-missing"]').length > 0`,
+    );
     await panelShot(app, 'panel-preflight-missing');
 
     /* ── 3. Every fixture: before, fill, after ──────────────────────── */
