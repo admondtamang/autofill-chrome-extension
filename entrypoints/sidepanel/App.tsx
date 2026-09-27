@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'preact/hooks';
 import type { PanelResponses } from '@/lib/messages';
 import type { FieldResult, FillReport as Report, PersonSummary } from '@/lib/schema';
+import type { PaletteValue, PasteTarget } from '@/lib/messages';
 import { FillReport } from './FillReport';
 import { PageStatus } from './PageStatus';
 import { PersonSearch } from './PersonSearch';
 import { RecordMode } from './RecordMode';
+import { ValueList } from './ValueList';
 import { LoginForm, SessionBar } from './SignIn';
-import { onPaletteDrop, onTabChanged, onUnauthorized, send } from './messaging';
+import { onTabChanged, onTargetChanged, onUnauthorized, send } from './messaging';
 import './style.css';
 
 export function App() {
@@ -33,8 +35,9 @@ export function App() {
   const [filling, setFilling] = useState(false);
   const [fillError, setFillError] = useState<string | null>(null);
 
-  const [palette, setPalette] = useState(false);
-  const [paletteBusy, setPaletteBusy] = useState(false);
+  const [values, setValues] = useState<PaletteValue[]>([]);
+  const [target, setTarget] = useState<PasteTarget | null>(null);
+  const [pasting, setPasting] = useState<string | null>(null);
   const [paletteError, setPaletteError] = useState<string | null>(null);
   // Manual drops land in the fill report like any other field — paths only (§8.3).
   const [drops, setDrops] = useState<FieldResult[]>([]);
@@ -100,20 +103,11 @@ export function App() {
       setReport(null);
       setDrops([]);
       setCanUndo(false);
-      // The content script drops the palette on navigation and tab hide (§11).
-      setPalette(false);
+      setTarget(null); // a new page has no selected field yet (§11.4)
       void detect();
     });
   }, [detect]);
 
-  useEffect(
-    () =>
-      onPaletteDrop((result) => {
-        setDrops((prev) => [...prev, result]);
-        if (result.status === 'filled') setCanUndo(true);
-      }),
-    [],
-  );
 
   // Pre-flight: which required values does this person lack on this form?
   useEffect(() => {
@@ -183,34 +177,54 @@ export function App() {
     }
   };
 
-  const togglePalette = async (): Promise<void> => {
-    const on = !palette;
-    setPaletteBusy(true);
-    const res = await send(
-      on && person !== null
-        ? { kind: 'PALETTE', on, type: person.personRef.type, personId: person.personRef.id }
-        : { kind: 'PALETTE', on: false },
-    );
-    setPaletteBusy(false);
+  // The person's values, listed in the panel. Rebuilt on every person change,
+  // which also resets every reveal (§11.2).
+  useEffect(() => {
+    if (person === null) {
+      setValues([]);
+      return;
+    }
+    let live = true;
+    setPaletteError(null);
+    void send({
+      kind: 'VALUES',
+      type: person.personRef.type,
+      personId: person.personRef.id,
+    }).then((res) => {
+      if (!live) return;
+      if (res.ok) setValues(res.data);
+      else {
+        setValues([]);
+        setPaletteError(res.error);
+      }
+    });
+    return () => {
+      live = false;
+    };
+  }, [person]);
+
+  // Which field on the page a paste would land in (§11.4).
+  useEffect(() => {
+    const refresh = (): void => {
+      void send({ kind: 'TARGET' }).then((res) => setTarget(res.ok ? res.data : null));
+    };
+    refresh();
+    return onTargetChanged(setTarget);
+  }, [detection]);
+
+  const paste = async (v: PaletteValue): Promise<void> => {
+    setPasting(v.path);
+    const res = await send({ kind: 'PASTE', path: v.path });
+    setPasting(null);
     if (!res.ok) {
       setPaletteError(res.error);
       return;
     }
     setPaletteError(null);
-    setPalette(res.data.on);
+    // A paste lands in the fill report like any other field — path only (§8.3).
+    setDrops((prev) => [...prev, res.data]);
+    if (res.data.status === 'filled') setCanUndo(true);
   };
-
-  // Re-open with the new person's values whenever the selection changes.
-  useEffect(() => {
-    if (!palette || person === null) return;
-    void send({
-      kind: 'PALETTE',
-      on: true,
-      type: person.personRef.type,
-      personId: person.personRef.id,
-    });
-    // `palette` is deliberately not a dependency: this reacts to the person.
-  }, [person]);
 
   const undo = async (): Promise<void> => {
     setUndoing(true);
@@ -349,25 +363,9 @@ export function App() {
 
       <section class="card">
         <div class="card__head">
-          <h2 class="section">Value palette</h2>
-          <button
-            class="small"
-            data-testid="palette-toggle"
-            aria-pressed={palette}
-            disabled={paletteBusy || (person === null && !palette)}
-            title={person === null ? 'Select a person first.' : 'Drag values onto the form'}
-            onClick={() => void togglePalette()}
-          >
-            {paletteBusy ? 'Working…' : palette ? 'Hide palette' : 'Show palette'}
-          </button>
+          <h2 class="section">Values</h2>
         </div>
-        <p class="hint" data-testid="palette-status">
-          {person === null
-            ? 'Select a person first.'
-            : palette
-              ? 'Palette open on the page — drag a value onto the field it belongs in.'
-              : 'Show the palette to place individual values by hand. Values stay masked.'}
-        </p>
+        <ValueList values={values} target={target} busy={pasting} onPaste={(v) => void paste(v)} />
         {paletteError !== null && <p class="error" role="alert">{paletteError}</p>}
       </section>
 

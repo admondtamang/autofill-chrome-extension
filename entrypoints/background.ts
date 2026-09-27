@@ -8,13 +8,12 @@ import {
   ok,
   type ContentMessage,
   type ContentResponses,
-  type PaletteDropMsg,
   type PaletteValue,
   type PanelMessage,
   type PanelResponses,
   type Result,
 } from '@/lib/messages';
-import { FieldResult, type ApplicantPayload, type FieldStatus, type FormMapping } from '@/lib/schema';
+import type { ApplicantPayload, FieldStatus, FormMapping } from '@/lib/schema';
 import type { Session } from '@/lib/data/types';
 import { payloadPaths } from '@/lib/record';
 
@@ -177,10 +176,17 @@ function flattenPayload(p: ApplicantPayload): PaletteValue[] {
   return out;
 }
 
+/**
+ * The flattened list for the person the panel is showing. Values live here only
+ * while the panel has them on screen; cleared on person change and on logout,
+ * never persisted (§11 amendment to §8.2).
+ */
+let cachedValues: PaletteValue[] = [];
+
 const PANEL_KINDS: ReadonlySet<string> = new Set<PanelMessage['kind']>([
   'SEARCH', 'DETECT', 'PREFLIGHT', 'FILL', 'UNDO',
   'ENABLE_SITE', 'RECORD_MODE', 'RECORD_GET', 'PAYLOAD_PATHS',
-  'LOGIN', 'LOGOUT', 'SESSION', 'PALETTE',
+  'LOGIN', 'LOGOUT', 'SESSION', 'VALUES', 'PASTE', 'TARGET',
 ]);
 
 /* ── Router ────────────────────────────────────────────────────────── */
@@ -271,21 +277,29 @@ export async function route(msg: PanelMessage): Promise<Result<PanelResponses[Pa
     case 'PAYLOAD_PATHS':
       return ok(payloadPaths());
 
-    case 'PALETTE': {
-      const { id } = await activeTab();
-      if (!msg.on) return ok(await toTab(id, { kind: 'SHOW_PALETTE', on: false }));
-      if (msg.type === undefined || msg.personId === undefined) return err('Select a person first.');
+    case 'VALUES': {
       // Same custody as every other route (§8.2): the payload is held only long
-      // enough to flatten it. From there the content script owns the values,
-      // under the §11 amendment's own close / navigate / hide / 60s budget.
+      // enough to flatten it. The side panel then owns the list; nothing is put
+      // into the page until the agent clicks a value (§11.1).
       const payload = holdPayload(await dataSource.getPayload(msg.type, msg.personId));
-      let values: PaletteValue[];
       try {
-        values = flattenPayload(payload);
+        cachedValues = flattenPayload(payload);
       } finally {
         releasePayload();
       }
-      return ok(await toTab(id, { kind: 'SHOW_PALETTE', on: true, values }));
+      return ok(cachedValues);
+    }
+
+    case 'TARGET': {
+      const { id } = await activeTab();
+      return ok(await toTab(id, { kind: 'GET_TARGET' }));
+    }
+
+    case 'PASTE': {
+      const value = cachedValues.find((v) => v.path === msg.path);
+      if (!value) return err('That value is no longer loaded — reselect the person.');
+      const { id } = await activeTab();
+      return ok(await toTab(id, { kind: 'PASTE_INTO', value }));
     }
 
     case 'LOGIN': {
@@ -318,14 +332,6 @@ export default defineBackground(() => {
 
   chrome.runtime.onMessage.addListener((raw, sender, sendResponse) => {
     if (!isMessage(raw)) return false;
-    // A manual drop (§11.5). Re-broadcast so it reaches the side panel's fill
-    // report; FieldResult.parse keeps anything but a path/status/detail out.
-    if (raw.kind === 'PALETTE_DROP' && sender.tab) {
-      const msg: PaletteDropMsg = { kind: 'PALETTE_DROP', result: FieldResult.parse(raw.result) };
-      void chrome.runtime.sendMessage(msg).catch(() => {});
-      sendResponse(ok({ ok: true } as const));
-      return false;
-    }
     // Content-script broadcasts (RECORD_FIELD_CAPTURED) pass straight through
     // to the side panel; only panel→worker messages are routed here.
     if (sender.tab || !PANEL_KINDS.has(raw.kind)) return false;

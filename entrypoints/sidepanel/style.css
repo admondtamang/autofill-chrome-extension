@@ -295,3 +295,56 @@ code {
 .capture__type { font-size: 11px; color: var(--ink-faint); }
 
 .switch { display: flex; align-items: center; gap: var(--s2); font-weight: 600; }
+
+/* ── Value list (CONTRACTS §11) ─────────────────────────────────────── */
+.values {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.value-row {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+}
+.value-apply {
+  flex: 1;
+  min-width: 0; /* 360px panel: long values must ellipsis, never widen the row */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 6px 8px;
+  text-align: left;
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.value-apply:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.value-apply:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.value-label {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.value-text {
+  font-family: ui-monospace, monospace;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.value-reveal {
+  flex: 0 0 auto;
+  align-self: center;
+  font-size: 11px;
+  padding: 3px 7px;
+}

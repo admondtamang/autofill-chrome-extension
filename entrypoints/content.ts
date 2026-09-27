@@ -10,13 +10,14 @@ import {
   ok,
   type ContentMessage,
   type ContentResponses,
-  type PaletteDropMsg,
+  type PasteTarget,
+  type TargetChangedMsg,
   type PaletteValue,
   type RecordFieldCapturedMsg,
   type Result,
 } from '@/lib/messages';
 import { detectFormKey } from '@/lib/page-detect';
-import { buildPalette, dropFieldFor, DRAG_TYPE, type Palette } from '@/lib/palette';
+import { dropFieldFor, targetLabel } from '@/lib/palette';
 import { startRecording } from '@/lib/record';
 import {
   ApplicantPayload,
@@ -31,11 +32,9 @@ import {
 const INJECTED = Symbol.for('immifill.injected');
 
 const CONTENT_KINDS: ReadonlySet<string> = new Set<ContentMessage['kind']>([
-  'DETECT_PAGE', 'FILL_PAGE', 'UNDO_PAGE', 'RECORD_MODE', 'RECORD_GET', 'SHOW_PALETTE',
+  'DETECT_PAGE', 'FILL_PAGE', 'UNDO_PAGE', 'RECORD_MODE', 'RECORD_GET', 'PASTE_INTO', 'GET_TARGET',
 ]);
 
-/** CONTRACTS §11 amendment: values in the page get the same 60s budget. */
-const PALETTE_IDLE_MS = 60_000;
 
 const HIGHLIGHT_ID = 'immifill-style';
 
@@ -60,15 +59,13 @@ export default defineContentScript({
     let stopRecording: (() => void) | null = null;
     let captured: FieldMapping[] = [];
 
-    /* ── Value palette (CONTRACTS §11) ─────────────────────────────────
-       Applicant values live here ONLY while the palette is open. They are
-       dropped on close, on navigation, when the tab hides, and after 60s
-       idle. Never chrome.storage, never logged. */
+    /* ── Value list target tracking (CONTRACTS §11) ────────────────────
+       Nothing is injected into the page. The list lives in the side panel;
+       the page only ever receives the one value the agent clicks (§11.1).
+       We track the last focused field so a paste has a target. */
 
-    let palette: Palette | null = null;
-    let tokens = new Map<string, PaletteValue>();
-    let palettePos: { x: number; y: number } | null = null;
-    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    /** The field the agent last focused. Identity only leaves this script. */
+    let target: Fillable | null = null;
     /** The mapping of the last fill on this page — the only one the page knows. */
     let lastMapping: FormMapping | null = null;
 
@@ -92,20 +89,28 @@ export default defineContentScript({
       el.classList.add(`immifill-${status}`);
     }
 
-    function closePalette(): void {
-      clearTimeout(idleTimer);
-      idleTimer = undefined;
-      document.removeEventListener('dragover', onDragOver, true);
-      document.removeEventListener('drop', onDrop, true);
-      palette?.destroy();
-      palette = null;
-      tokens = new Map(); // the values themselves go with it
+    /** §11.4 — what the panel shows as the paste target. Never a value. */
+    const describeTarget = (): PasteTarget | null =>
+      target && target.isConnected
+        ? { label: targetLabel(target), selector: stableSelector(target) }
+        : null;
+
+    function announceTarget(): void {
+      const msg: TargetChangedMsg = { kind: 'TARGET_CHANGED', target: describeTarget() };
+      void chrome.runtime.sendMessage(msg).catch(() => {});
     }
 
-    const touchIdle = (): void => {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(closePalette, PALETTE_IDLE_MS);
-    };
+    document.addEventListener(
+      'focusin',
+      (ev) => {
+        const el = ev.target;
+        // A submit/declaration control is never a paste target (§11.3).
+        if (!isFillable(el) || isUnsafe(el)) return;
+        target = el;
+        announceTarget();
+      },
+      true,
+    );
 
     /** Prior value of a manual drop target, captured before the first write (§11.3). */
     function snapshotTarget(el: Fillable): void {
@@ -161,26 +166,9 @@ export default defineContentScript({
       return { path: v.path, status: 'filled' };
     }
 
-    function onDragOver(ev: DragEvent): void {
-      // Only our own drags are droppable; everything else keeps page behaviour.
-      if (ev.dataTransfer?.types.includes(DRAG_TYPE)) ev.preventDefault();
-    }
-
-    function onDrop(ev: DragEvent): void {
-      const token = ev.dataTransfer?.getData(DRAG_TYPE);
-      const v = token ? tokens.get(token) : undefined;
-      if (!v) return;
-      ev.preventDefault();
-      ev.stopPropagation();
-      touchIdle();
-      const msg: PaletteDropMsg = { kind: 'PALETTE_DROP', result: dropValue(ev.target, v) };
-      void chrome.runtime.sendMessage(msg).catch(() => {});
-    }
-
-    // Navigation and tab-hide both end the palette's custody of the values.
-    window.addEventListener('pagehide', closePalette);
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) closePalette();
+    // Navigation drops the target; the panel is told so it stops offering a paste.
+    window.addEventListener('pagehide', () => {
+      target = null;
     });
 
     async function route(
@@ -229,32 +217,15 @@ export default defineContentScript({
         case 'RECORD_GET':
           return ok(captured);
 
-        case 'SHOW_PALETTE': {
-          closePalette(); // a person change rebuilds, which also resets every reveal
-          if (msg.on && msg.values) {
-            palette = buildPalette(
-              msg.values,
-              {
-                onDragStart: (token, value) => {
-                  tokens.set(token, value);
-                  touchIdle();
-                },
-                onDragEnd: (token) => {
-                  tokens.delete(token);
-                },
-                onMove: (x, y) => {
-                  palettePos = { x, y };
-                },
-                onClose: closePalette,
-              },
-              palettePos ?? undefined,
-            );
-            document.body.appendChild(palette.root);
-            document.addEventListener('dragover', onDragOver, true);
-            document.addEventListener('drop', onDrop, true);
-            touchIdle();
+        case 'GET_TARGET':
+          return ok(describeTarget());
+
+        case 'PASTE_INTO': {
+          // §11.3 — the same engine path as a mapped fill, target included.
+          if (!target || !target.isConnected) {
+            return ok({ path: msg.value.path, status: 'not_found', detail: 'no field selected' });
           }
-          return ok({ on: palette !== null });
+          return ok(dropValue(target, msg.value));
         }
       }
     }

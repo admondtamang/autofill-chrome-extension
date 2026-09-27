@@ -1,5 +1,11 @@
-import { isMessage, type PanelMessage, type PanelResponses, type Result } from '@/lib/messages';
-import type { FieldMapping, FieldResult } from '@/lib/schema';
+import {
+  isMessage,
+  type PanelMessage,
+  type PanelResponses,
+  type PasteTarget,
+  type Result,
+} from '@/lib/messages';
+import type { FieldMapping } from '@/lib/schema';
 
 // The Playwright demo opens sidepanel.html as a plain tab, where the extension
 // APIs may be absent. Every helper degrades to an honest error instead of throwing.
@@ -47,11 +53,11 @@ export function onFieldCaptured(cb: (field: FieldMapping) => void): () => void {
   return () => runtime.onMessage.removeListener(listener);
 }
 
-/** Manual palette drops, forwarded by the worker (CONTRACTS §11.5). */
-export function onPaletteDrop(cb: (result: FieldResult) => void): () => void {
+/** The focused field on the page changed (CONTRACTS §11.4). Identity, no value. */
+export function onTargetChanged(cb: (target: PasteTarget | null) => void): () => void {
   if (!runtime?.id) return () => {};
   const listener = (raw: unknown): void => {
-    if (isMessage(raw) && raw.kind === 'PALETTE_DROP') cb(raw.result);
+    if (isMessage(raw) && raw.kind === 'TARGET_CHANGED') cb(raw.target);
   };
   runtime.onMessage.addListener(listener);
   return () => runtime.onMessage.removeListener(listener);

@@ -25,9 +25,14 @@ export type PayloadPathsMsg = { kind: 'PAYLOAD_PATHS' };
 export type LoginMsg = { kind: 'LOGIN'; email: string; password: string };
 export type LogoutMsg = { kind: 'LOGOUT' };
 export type SessionMsg = { kind: 'SESSION' };
-export type PaletteMsg = { kind: 'PALETTE'; on: boolean; type?: EntityType; personId?: number };
+export type ValuesMsg = { kind: 'VALUES'; type: EntityType; personId: number };
+export type PasteMsg = { kind: 'PASTE'; path: string };
+export type TargetMsg = { kind: 'TARGET' };
 
-/** One draggable row in the value palette (CONTRACTS §11.5). */
+/** The field the agent last focused on the page. Identity, never a value (§11.4). */
+export type PasteTarget = { label: string; selector: string };
+
+/** One row in the side panel's value list (CONTRACTS §11.5). */
 export type PaletteValue = {
   path: string;
   label: string;
@@ -51,7 +56,9 @@ export type PanelMessage =
   | LoginMsg
   | LogoutMsg
   | SessionMsg
-  | PaletteMsg;
+  | ValuesMsg
+  | PasteMsg
+  | TargetMsg;
 
 export interface PanelResponses {
   SEARCH: PersonSummary[];
@@ -66,7 +73,9 @@ export interface PanelResponses {
   LOGIN: { user: SessionUser; expiry: string };
   LOGOUT: { ok: true };
   SESSION: { signedIn: boolean; user?: SessionUser; expiry?: string };
-  PALETTE: { on: boolean };
+  VALUES: PaletteValue[];
+  PASTE: FieldResult;
+  TARGET: PasteTarget | null;
 }
 
 /* ── Service worker → content script (chrome.tabs.sendMessage) ────────── */
@@ -76,7 +85,8 @@ export type FillPageMsg = { kind: 'FILL_PAGE'; mapping: FormMapping; payload: un
 export type UndoPageMsg = { kind: 'UNDO_PAGE' };
 export type ContentRecordModeMsg = { kind: 'RECORD_MODE'; on: boolean; paths: string[] };
 export type ContentRecordGetMsg = { kind: 'RECORD_GET' };
-export type ShowPaletteMsg = { kind: 'SHOW_PALETTE'; on: boolean; values?: PaletteValue[] };
+export type PasteIntoMsg = { kind: 'PASTE_INTO'; value: PaletteValue };
+export type GetTargetMsg = { kind: 'GET_TARGET' };
 
 export type ContentMessage =
   | DetectPageMsg
@@ -84,7 +94,8 @@ export type ContentMessage =
   | UndoPageMsg
   | ContentRecordModeMsg
   | ContentRecordGetMsg
-  | ShowPaletteMsg;
+  | PasteIntoMsg
+  | GetTargetMsg;
 
 export interface ContentResponses {
   DETECT_PAGE: { formKey: string } | null;
@@ -92,7 +103,8 @@ export interface ContentResponses {
   UNDO_PAGE: { restored: number };
   RECORD_MODE: { on: boolean };
   RECORD_GET: FieldMapping[];
-  SHOW_PALETTE: { on: boolean };
+  PASTE_INTO: FieldResult;
+  GET_TARGET: PasteTarget | null;
 }
 
 /* ── Content script → side panel (chrome.runtime.sendMessage broadcast) ─ */
@@ -103,17 +115,16 @@ export type RecordFieldCapturedMsg = {
 };
 
 /**
- * Content → service worker (§11.5). The worker forwards it verbatim to the
- * side panel, so a manual drop lands in the fill report like any other field.
- * `result` carries a path and a status — never a value (§8.3).
+ * Content → side panel (§11.4). Broadcast whenever the focused field changes,
+ * so the panel can name the paste target. Carries identity, never a value.
  */
-export type PaletteDropMsg = { kind: 'PALETTE_DROP'; result: FieldResult };
+export type TargetChangedMsg = { kind: 'TARGET_CHANGED'; target: PasteTarget | null };
 
 export type AnyMessage =
   | PanelMessage
   | ContentMessage
   | RecordFieldCapturedMsg
-  | PaletteDropMsg;
+  | TargetChangedMsg;
 
 export const isMessage = (m: unknown): m is AnyMessage =>
   typeof m === 'object' && m !== null && typeof (m as { kind?: unknown }).kind === 'string';
