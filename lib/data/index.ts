@@ -1,11 +1,11 @@
 import type { DataSource } from '@/lib/data/types';
-import { StaticDataSource } from '@/lib/data/static';
 import { CrmApiDataSource } from '@/lib/data/crm-api';
 
-// The only switch point between phases: WXT_DATA_SOURCE / WXT_CRM_BASE are
-// injected by `vite.define` in wxt.config.ts (literal substitution, so no
-// runtime env lookup). Flipping the flag touches no fill-engine code.
-export const dataSource: DataSource =
-  import.meta.env.WXT_DATA_SOURCE === 'api'
-    ? new CrmApiDataSource(import.meta.env.WXT_CRM_BASE)
-    : new StaticDataSource();
+/**
+ * The CRM is the only data source. There is deliberately no bundled-people
+ * fallback: if WXT_CRM_BASE is not configured the extension fails loudly at
+ * sign-in rather than quietly serving something that is not the client's record.
+ */
+export const CRM_BASE: string = import.meta.env.WXT_CRM_BASE;
+
+export const dataSource: DataSource = new CrmApiDataSource(CRM_BASE);

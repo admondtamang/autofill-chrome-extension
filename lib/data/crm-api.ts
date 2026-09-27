@@ -9,17 +9,75 @@ import {
 } from '@/lib/schema';
 import type { DataSource, SearchOpts, Session } from '@/lib/data/types';
 import { NotFoundError, UnauthorizedError } from '@/lib/data/errors';
+import { toApplicantPayload } from '@/lib/data/crm-map';
 
 const SESSION_KEY = 'immifill.session';
 const LOGOUT_ALARM = 'immifill.logout';
 const LOGOUT_LEAD_MS = 60_000; // log out 60s before the token expires
 
 /** Login response. Not in CONTRACTS §1 — `Session` there is a TS interface only. */
+const SessionUser = z.object({ id: z.number().int(), email: z.string() });
+
 const SessionSchema = z.object({
   token: z.string(),
   expiry: z.string(),
-  user: z.object({ id: z.number().int(), email: z.string() }),
+  user: SessionUser,
 });
+
+/** Express APIs commonly nest the payload under `data`. Look through it. */
+function unwrap(body: unknown): Record<string, unknown> | null {
+  if (typeof body !== 'object' || body === null) return null;
+  const o = body as Record<string, unknown>;
+  const inner = o.data;
+  if (typeof inner === 'object' && inner !== null && !Array.isArray(inner)) {
+    return { ...(inner as Record<string, unknown>), ...o };
+  }
+  return o;
+}
+
+/** Key names only — never values. Used to diagnose a shape mismatch safely. */
+function keysOf(body: unknown): string {
+  const o = unwrap(body);
+  return o ? Object.keys(o).join(', ') || '(no keys)' : `(${typeof body})`;
+}
+
+const TOKEN_KEYS = ['token', 'accessToken', 'access_token', 'jwt', 'idToken', 'id_token'];
+
+function pickToken(body: unknown): string | null {
+  const o = unwrap(body);
+  if (!o) return null;
+  for (const k of TOKEN_KEYS) {
+    const v = o[k];
+    if (typeof v === 'string' && v.length > 0) return v;
+  }
+  return null;
+}
+
+/** A JWT's own `exp` beats any guess; otherwise fall back to 8 hours. */
+function jwtExpiry(token: string): string | null {
+  const part = token.split('.')[1];
+  if (!part) return null;
+  try {
+    const json: unknown = JSON.parse(atob(part.replace(/-/g, '+').replace(/_/g, '/')));
+    const exp = (json as { exp?: unknown }).exp;
+    return typeof exp === 'number' ? new Date(exp * 1000).toISOString() : null;
+  } catch {
+    return null; // not a JWT, or not base64 — fall through to the default
+  }
+}
+
+const EXPIRY_KEYS = ['expiry', 'expiresAt', 'expires_at', 'expires'];
+const DEFAULT_SESSION_MS = 8 * 60 * 60 * 1000;
+
+function pickExpiry(body: unknown, token: string): string {
+  const o = unwrap(body);
+  for (const k of EXPIRY_KEYS) {
+    const v = o?.[k];
+    if (typeof v === 'string' && !Number.isNaN(Date.parse(v))) return new Date(v).toISOString();
+    if (typeof v === 'number') return new Date(v > 1e12 ? v : v * 1000).toISOString();
+  }
+  return jwtExpiry(token) ?? new Date(Date.now() + DEFAULT_SESSION_MS).toISOString();
+}
 
 /**
  * A row from an existing CRM list endpoint (`/lead`, `/student`, ...).
@@ -57,16 +115,46 @@ export class CrmApiDataSource implements DataSource {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email, password }), // password is never stored
     });
-    if (res.status === 401) {
+    if (res.status === 401 || res.status === 403) {
       await this.clearSession();
-      throw new UnauthorizedError('invalid credentials');
+      throw new UnauthorizedError('Email or password not recognised.');
     }
-    if (!res.ok) throw new Error(`login failed: ${res.status}`);
+    const body: unknown = await res.json().catch(() => null);
+    if (!res.ok) {
+      // 422 is the CRM's validation shape; its message names a field, never a value.
+      const message = (body as { message?: unknown } | null)?.message;
+      throw new Error(typeof message === 'string' ? message : `login failed: ${res.status}`);
+    }
 
-    const session = SessionSchema.parse(await res.json());
+    const token = pickToken(body);
+    if (!token) {
+      // Names the keys the CRM actually returned — never their values — so a
+      // shape mismatch is diagnosable from one real sign-in instead of a guess.
+      throw new Error(`login succeeded but no token field was found in: ${keysOf(body)}`);
+    }
+
+    const session: Session = {
+      token,
+      expiry: pickExpiry(body, token),
+      user: (await this.identify(body, token)) ?? { id: 0, email },
+    };
     await chrome.storage.session.set({ [SESSION_KEY]: session });
     this.scheduleLogout(session);
     return session;
+  }
+
+  /** The user may arrive with the token, or from /user/me. Never fatal. */
+  private async identify(body: unknown, token: string): Promise<Session['user'] | null> {
+    const inline = SessionUser.safeParse(unwrap(body)?.user);
+    if (inline.success) return inline.data;
+    try {
+      const res = await fetch(`${this.base}/user/me`, { headers: { authorization: token } });
+      if (!res.ok) return null;
+      const me = SessionUser.safeParse(unwrap(await res.json()));
+      return me.success ? me.data : null;
+    } catch {
+      return null; // identity is cosmetic; a working token is what matters
+    }
   }
 
   async search(
@@ -89,8 +177,15 @@ export class CrmApiDataSource implements DataSource {
     }));
   }
 
-  getPayload(type: EntityType, id: number): Promise<ApplicantPayload> {
-    return this.request(`/immifill/payload/${type}/${id}`, ApplicantPayload);
+  /**
+   * Reads the ordinary CRM record and shapes it (lib/data/crm-map.ts). The
+   * backend PRD's `/immifill/payload` route does not exist; when it ships,
+   * prefer it and drop the mapper. A record missing most fields is normal —
+   * those become `missing` in the fill report, not a failed fetch.
+   */
+  async getPayload(type: EntityType, id: number): Promise<ApplicantPayload> {
+    const body = await this.request(`/${type}/${id}`, z.unknown());
+    return toApplicantPayload(type, id, body);
   }
 
   listMappings(): Promise<MappingIndexEntry[]> {

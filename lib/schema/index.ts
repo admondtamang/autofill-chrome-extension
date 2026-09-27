@@ -11,27 +11,44 @@ export const EntityType = z.enum([
 ]);
 export type EntityType = z.infer<typeof EntityType>;
 
+/**
+ * A real CRM record is partial: most people have no passport on file, no visa
+ * expiry, no address history. Every group therefore defaults rather than being
+ * required — an absent value must end as `missing` in the fill report, which is
+ * a first-class outcome, NOT a reason to reject the whole person.
+ *
+ * The inferred type is unchanged: after parsing every key is present (null where
+ * the CRM had nothing), so the fill engine and `preflight` are unaffected.
+ */
+const nullableString = z.string().nullable().default(null);
+
 export const ApplicantPayload = z.object({
   personRef: z.object({ type: EntityType, id: z.number().int() }),
-  name: z.object({
-    given: z.string(),
-    middle: z.string().nullable(),
-    family: z.string(),
-  }),
-  dob: z.string().nullable(), // ISO yyyy-MM-dd
-  contact: z.object({ email: z.string().nullable(), phone: z.string().nullable() }),
-  passport: z.object({
-    number: z.string().nullable(),
-    issued: z.string().nullable(),
-    expires: z.string().nullable(),
-  }),
-  citizenship: z.object({ code: z.string().nullable(), label: z.string().nullable() }),
-  currentVisa: z.object({ type: z.string().nullable(), expires: z.string().nullable() }),
-  address: z.object({ residential: z.string().nullable() }),
-  location: z.string().nullable(), // 'Onshore' | 'Offshore' (free text)
-  employment: z.object({ occupation: z.string().nullable() }),
-  education: z.object({ highest: z.string().nullable() }),
-  serviceTypes: z.array(z.string()),
+  name: z
+    .object({
+      given: z.string().default(''),
+      middle: nullableString,
+      family: z.string().default(''),
+    })
+    .default({ given: '', middle: null, family: '' }),
+  dob: nullableString, // ISO yyyy-MM-dd
+  contact: z
+    .object({ email: nullableString, phone: nullableString })
+    .default({ email: null, phone: null }),
+  passport: z
+    .object({ number: nullableString, issued: nullableString, expires: nullableString })
+    .default({ number: null, issued: null, expires: null }),
+  citizenship: z
+    .object({ code: nullableString, label: nullableString })
+    .default({ code: null, label: null }),
+  currentVisa: z
+    .object({ type: nullableString, expires: nullableString })
+    .default({ type: null, expires: null }),
+  address: z.object({ residential: nullableString }).default({ residential: null }),
+  location: nullableString, // 'Onshore' | 'Offshore' (free text)
+  employment: z.object({ occupation: nullableString }).default({ occupation: null }),
+  education: z.object({ highest: nullableString }).default({ highest: null }),
+  serviceTypes: z.array(z.string()).default([]),
   addressHistory: z
     .array(
       z.object({

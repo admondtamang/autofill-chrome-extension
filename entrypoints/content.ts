@@ -48,11 +48,9 @@ const HIGHLIGHT_CSS = `.immifill-filled{outline:2px solid #2e7d32!important}
 .immifill-rejected{outline:2px solid #c62828!important}`;
 
 export default defineContentScript({
-  matches: [
-    'http://localhost:5174/*',
-    'http://127.0.0.1:5175/*',
-    'https://online.immi.gov.au/*',
-  ],
+  // Every site, per the owner's all-sites decision. The engine's safety gate
+  // (lib/fill-engine/safety.ts) is what keeps this from being dangerous.
+  matches: ['<all_urls>'],
   main() {
     const flags = window as unknown as Record<symbol, boolean | undefined>;
     if (flags[INJECTED]) return;

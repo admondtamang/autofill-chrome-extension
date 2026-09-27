@@ -336,3 +336,69 @@ E2E suite runs with no staging dependency.
 Every route requires a bare `authorization: <token>` header — no `Bearer` prefix —
 and returns `401` without it. The mock serves the SAME synthetic people as
 `data/people.json`, so the Phase 2 E2E run asserts identical outcomes to Phase 1.
+
+---
+
+## 11. Value list — click to paste (BINDING, amends §8.2)
+
+The side panel lists the selected person's values. The agent focuses a field on
+the page, then clicks a value to paste it in. This is for details that are not
+worth a mapping, or that a mapped fill got wrong.
+
+**Scope of this slice:** the ImmiAccount replica page only
+(`fixtures/immi-saved/index.html`, formKey `immi-personal-details`). The panel
+says so plainly on any other page rather than silently doing nothing.
+
+§8.2 is amended, narrowly:
+
+> Applicant values may additionally live in the **side panel** while the value
+> list is open, and a single pasted value reaches the page. Values are cleared
+> on person change, on tab change, and after the same 60s idle budget. They are
+> never written to `chrome.storage`, never logged, never persisted.
+
+§8.3 is UNCHANGED: the fill report and audit still carry paths and counts only.
+
+### 11.1 The page only ever receives what was pasted
+
+No value is injected into the page to make this work — no palette, no drag
+payload. Exactly one value crosses per paste, into one field the agent chose.
+
+### 11.2 Masking
+
+Values render masked (first 3 chars, then bullets; email keeps its domain).
+Reveal is per-value, per-session, resets on person change, and is never required
+in order to paste.
+
+### 11.3 A paste is a single-field fill
+
+A paste runs the SAME engine path as `fillPage` for one field: `isUnsafe()` gate
+→ `setNative` → `verify` → highlight → a `FieldResult`. It therefore ends as
+exactly one of `filled` / `rejected` / `not_found`, appears in the fill report
+like any other field, and is covered by undo. **Manual paste is not a bypass.**
+
+- A paste into anything `isUnsafe()` refuses is `rejected` with
+  `detail: 'unsafe target'` and no write occurs.
+- The undo snapshot captures the target's prior value before the first paste.
+- A date is formatted by the target's mapping `format` when mapped; an unmapped
+  target receives the canonical value.
+
+### 11.4 Target tracking
+
+The content script tracks the last focused fillable element and reports it to
+the panel as `{ label, selector }` — a field identity, never its value. The
+panel shows the target so a paste is never a guess. No focused field means the
+paste buttons are disabled with a stated reason.
+
+### 11.5 Messages (extends §3)
+
+| kind | direction | payload | response `data` |
+| --- | --- | --- | --- |
+| `VALUES` | panel → worker | `{ type, personId }` | `PaletteValue[]` |
+| `PASTE` | panel → worker | `{ path }` | `FieldResult` |
+| `PASTE_INTO` | worker → content | `{ value: PaletteValue }` | `FieldResult` |
+| `TARGET` | panel → worker | `{}` | `{ label, selector } \| null` |
+| `GET_TARGET` | worker → content | `{}` | `{ label, selector } \| null` |
+
+`PaletteValue` is `{ path, label, value, kind }`, flattened from the payload by
+the worker. The worker holds the payload under the existing custody rules while
+the list is open.
