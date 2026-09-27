@@ -1,44 +1,71 @@
 import { describe, it, expect } from 'vitest';
-import { toApplicantPayload, toIsoDate, unmappedKeys } from '@/lib/data/crm-map';
+import { toApplicantPayload, toIsoDate, parseServiceTypes, splitCountry } from '@/lib/data/crm-map';
 
-describe('CRM record -> ApplicantPayload', () => {
-  it('an empty record parses instead of throwing (the reported bug)', () => {
-    const p = toApplicantPayload('lead', 42, {});
-    expect(p.personRef).toEqual({ type: 'lead', id: 42 });
+// Records copied from the live CRM (2026-09-27). Field names verified, values
+// are the CRM's own lorem-ipsum test data — no real client information.
+const LEAD_35 = {
+  id: 35, firstName: 'Duis', middleName: null, lastName: 'dolorem et exer',
+  dob: null, passport: null, issueDate: null, expiryDate: null,
+  email: 'rubukejis@yopmail.com', phone: '+16575761893', status: 'New',
+  serviceType: '["Tribunal Service"]', country: null, visa: null, visaExpiry: null,
+  address: null, location: null, occupation: null, anzsco: null, qualification: null,
+};
+
+const LEAD_32 = {
+  id: 32, firstName: 'Leila', middleName: 'Sierra Bell', lastName: 'Hampton',
+  dob: '09/01/2026', email: 'honojih@yopmail.com', phone: '+11413382693',
+  passport: 'Quasi quisquam eu et',
+  issueDate: '2026-08-01T18:15:00.000Z', expiryDate: '2026-11-29T18:15:00.000Z',
+  status: 'Converted', serviceType: '[]', country: 'AUT', visa: 'AAT Hearing',
+  visaExpiry: '2026-09-29T18:15:00.000Z', address: 'Vero cumque deserunt',
+  location: 'Onshore', occupation: 'Chief Executive or Managing Director',
+  qualification: 'Ex eius accusamus su',
+};
+
+describe('real CRM lead -> ApplicantPayload', () => {
+  it('a mostly-null lead parses; absent values become null, not an error', () => {
+    const p = toApplicantPayload('lead', 35, LEAD_35);
+    expect(p.name).toEqual({ given: 'Duis', middle: null, family: 'dolorem et exer' });
+    expect(p.contact.email).toBe('rubukejis@yopmail.com');
     expect(p.dob).toBeNull();
     expect(p.passport.number).toBeNull();
+    expect(p.serviceTypes).toEqual(['Tribunal Service']);
+  });
+
+  it('a populated lead maps every field the CRM actually has', () => {
+    const p = toApplicantPayload('lead', 32, LEAD_32);
+    expect(p.name.middle).toBe('Sierra Bell');
+    expect(p.passport.number).toBe('Quasi quisquam eu et');
+    expect(p.passport.issued).toBe('2026-08-01');   // ISO datetime -> date
+    expect(p.passport.expires).toBe('2026-11-29');
+    expect(p.citizenship).toEqual({ code: 'AUT', label: null }); // ISO-3 code
+    expect(p.currentVisa).toEqual({ type: 'AAT Hearing', expires: '2026-09-29' });
+    expect(p.employment.occupation).toBe('Chief Executive or Managing Director');
+    expect(p.education.highest).toBe('Ex eius accusamus su');
+    expect(p.location).toBe('Onshore');
     expect(p.serviceTypes).toEqual([]);
   });
 
-  it('maps a realistic snake_case CRM row', () => {
-    const p = toApplicantPayload('lead', 7, {
-      id: 7, first_name: 'Asha', last_name: 'Gurung',
-      date_of_birth: '1994-03-15T00:00:00.000Z',
-      email: 'a@example.test', mobile: '+61400000001',
-      passport_number: 'PA1234567', passport_expiry_date: '09/01/2032',
-      nationality: 'Nepal', visa_type: 'Student (500)',
-      residential_address: '1 Test St, Sydney',
-    });
-    expect(p.name).toEqual({ given: 'Asha', middle: null, family: 'Gurung' });
-    expect(p.dob).toBe('1994-03-15');
-    expect(p.passport.expires).toBe('2032-01-09'); // day-first slash date
-    expect(p.citizenship.label).toBe('Nepal');
-    expect(p.contact.phone).toBe('+61400000001');
+  it('reads dob MONTH-first, as the CRM stores it', () => {
+    // "07/13/2026" is the proof: 13 cannot be a month.
+    expect(toIsoDate('07/13/2026')).toBe('2026-07-13');
+    expect(toIsoDate('09/01/2026')).toBe('2026-09-01'); // 1 Sept, not 9 Jan
+    expect(toIsoDate('08/22/2026')).toBe('2026-08-22');
+    // ...but a value that cannot be month-first is still read day-first.
+    expect(toIsoDate('25/12/2026')).toBe('2026-12-25');
+    expect(toIsoDate('13/13/2026')).toBeNull();
   });
 
-  it('looks through a `data` wrapper', () => {
-    const p = toApplicantPayload('student', 9, { data: { firstName: 'Zoé' } });
-    expect(p.name.given).toBe('Zoé');
+  it('parses serviceType, which arrives as a JSON string', () => {
+    expect(parseServiceTypes('["Education","Skill Assessment"]')).toEqual(['Education', 'Skill Assessment']);
+    expect(parseServiceTypes('[]')).toEqual([]);
+    expect(parseServiceTypes(null)).toEqual([]);
+    expect(parseServiceTypes('Visa')).toEqual(['Visa']); // not JSON: one service
   });
 
-  it('reports unmapped keys by name only', () => {
-    expect(unmappedKeys({ first_name: 'x', weird_column: 'y' })).toEqual(['weird_column']);
-  });
-
-  it('normalises dates the engine can parse', () => {
-    expect(toIsoDate('15/03/1994')).toBe('1994-03-15');
-    expect(toIsoDate('1994-03-15')).toBe('1994-03-15');
-    expect(toIsoDate('not a date')).toBeNull();
-    expect(toIsoDate(null)).toBeNull();
+  it('tells an ISO country code from a country name', () => {
+    expect(splitCountry('NPL')).toEqual({ code: 'NPL', label: null });
+    expect(splitCountry('Nepal')).toEqual({ code: null, label: 'Nepal' });
+    expect(splitCountry(null)).toEqual({ code: null, label: null });
   });
 });

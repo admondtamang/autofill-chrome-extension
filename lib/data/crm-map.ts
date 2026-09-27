@@ -27,6 +27,16 @@ export function unwrapRecord(body: unknown): Rec {
   return o;
 }
 
+/** Raw value of the first candidate present — used where the shape is not a string. */
+function rawOf(rec: Rec, keys: readonly string[]): unknown {
+  const lower = new Map(Object.keys(rec).map((k) => [k.toLowerCase(), k]));
+  for (const key of keys) {
+    const actual = lower.get(key.toLowerCase());
+    if (actual !== undefined && rec[actual] != null) return rec[actual];
+  }
+  return null;
+}
+
 /** First candidate present and non-empty, else null. Case-insensitive. */
 function pick(rec: Rec, keys: readonly string[]): string | null {
   const lower = new Map(Object.keys(rec).map((k) => [k.toLowerCase(), k]));
@@ -44,7 +54,11 @@ function pick(rec: Rec, keys: readonly string[]): string | null {
 /**
  * The engine formats dates from ISO (`formatValue` calls `parseISO`), so any
  * other shape must be normalised here or every date silently reports missing.
- * An ambiguous slash date is read day-first, which is the Australian form.
+ *
+ * The CRM stores `dob` MONTH-FIRST: the live data contains "07/13/2026", and 13
+ * cannot be a month. Read month-first, but fall back to day-first when the
+ * first part cannot be a month — that way "25/12/2026" is still December 25
+ * rather than being discarded.
  */
 export function toIsoDate(raw: string | null): string | null {
   if (raw === null) return null;
@@ -54,30 +68,62 @@ export function toIsoDate(raw: string | null): string | null {
   if (iso?.[1]) return iso[1];
   const slash = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(value);
   if (slash?.[1] && slash[2] && slash[3]) {
-    return `${slash[3]}-${slash[2].padStart(2, '0')}-${slash[1].padStart(2, '0')}`;
+    const [a, b, year] = [Number(slash[1]), Number(slash[2]), slash[3]];
+    const [month, day] = a > 12 ? [b, a] : [a, b]; // month-first unless impossible
+    if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
   }
   const parsed = Date.parse(value);
   return Number.isNaN(parsed) ? null : new Date(parsed).toISOString().slice(0, 10);
 }
 
+/** `serviceType` arrives as a JSON *string*: "[\"Visa\",\"Education\"]". */
+export function parseServiceTypes(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.filter((v): v is string => typeof v === 'string');
+  if (typeof raw !== 'string' || raw.trim() === '') return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [raw]; // a plain string is a single service, not a failure
+  }
+}
+
+/**
+ * `country` carries either an ISO-3 code ("NPL", "AUT") or a name ("Nepal").
+ * Set whichever it is and leave the other null: guessing a translation would
+ * risk filling a wrong country, and a mismatch is visible as `rejected`.
+ */
+export function splitCountry(raw: string | null): { code: string | null; label: string | null } {
+  if (raw === null) return { code: null, label: null };
+  return /^[A-Z]{2,3}$/.test(raw.trim())
+    ? { code: raw.trim(), label: null }
+    : { code: null, label: raw.trim() };
+}
+
+/**
+ * First entry in each list is the name VERIFIED against the live CRM
+ * (2026-09-27, `/lead` and `/lead/{id}`); the rest are fallbacks in case other
+ * entity types spell it differently.
+ */
 const F = {
-  given: ['first_name', 'firstName', 'given_name', 'givenName', 'first'],
-  middle: ['middle_name', 'middleName', 'middle'],
-  family: ['last_name', 'lastName', 'family_name', 'familyName', 'surname', 'last'],
-  dob: ['dob', 'date_of_birth', 'dateOfBirth', 'birth_date', 'birthDate', 'birthdate'],
-  email: ['email', 'email_address', 'emailAddress', 'primary_email', 'personal_email'],
-  phone: ['phone', 'mobile', 'phone_number', 'phoneNumber', 'mobile_number', 'contact_number'],
-  passportNumber: ['passport_number', 'passportNumber', 'passport_no', 'passportNo', 'passport'],
-  passportIssued: ['passport_issue_date', 'passportIssueDate', 'passport_issued', 'passport_issue'],
-  passportExpires: ['passport_expiry_date', 'passportExpiry', 'passport_expiry', 'passport_expires'],
-  citizenshipLabel: ['nationality', 'citizenship', 'country_of_citizenship', 'citizenship_name'],
-  citizenshipCode: ['citizenship_code', 'nationality_code', 'country_code'],
-  visaType: ['visa_type', 'visaType', 'current_visa', 'visa', 'visa_subclass'],
-  visaExpires: ['visa_expiry_date', 'visaExpiry', 'visa_expiry', 'visa_expires'],
-  address: ['residential_address', 'residentialAddress', 'address', 'street_address', 'address_line1'],
-  location: ['location', 'onshore_offshore', 'applying_from', 'applicant_location'],
-  occupation: ['occupation', 'job_title', 'jobTitle', 'profession'],
-  education: ['highest_qualification', 'highest_education', 'qualification', 'education'],
+  given: ['firstName', 'first_name', 'given_name', 'givenName'],
+  middle: ['middleName', 'middle_name', 'middle'],
+  family: ['lastName', 'last_name', 'family_name', 'familyName', 'surname'],
+  dob: ['dob', 'date_of_birth', 'dateOfBirth', 'birthDate'],
+  email: ['email', 'email_address', 'emailAddress'],
+  phone: ['phone', 'mobile', 'phone_number', 'phoneNumber'],
+  passportNumber: ['passport', 'passport_number', 'passportNumber', 'passportNo'],
+  passportIssued: ['issueDate', 'issue_date', 'passport_issue_date', 'passportIssueDate'],
+  passportExpires: ['expiryDate', 'expiry_date', 'passport_expiry_date', 'passportExpiry'],
+  country: ['country', 'nationality', 'citizenship', 'country_of_citizenship'],
+  visaType: ['visa', 'visa_type', 'visaType', 'visa_subclass'],
+  visaExpires: ['visaExpiry', 'visa_expiry', 'visa_expiry_date', 'visa_expires'],
+  address: ['address', 'residential_address', 'residentialAddress', 'street_address'],
+  location: ['location', 'onshore_offshore', 'applying_from'],
+  occupation: ['occupation', 'anzsco', 'job_title', 'jobTitle', 'profession'],
+  education: ['qualification', 'highest_qualification', 'highest_education', 'education'],
+  serviceType: ['serviceType', 'service_type', 'serviceTypes', 'services'],
 } as const;
 
 export function toApplicantPayload(type: EntityType, id: number, body: unknown): ApplicantPayload {
@@ -96,14 +142,14 @@ export function toApplicantPayload(type: EntityType, id: number, body: unknown):
       issued: toIsoDate(pick(r, F.passportIssued)),
       expires: toIsoDate(pick(r, F.passportExpires)),
     },
-    citizenship: { code: pick(r, F.citizenshipCode), label: pick(r, F.citizenshipLabel) },
+    citizenship: splitCountry(pick(r, F.country)),
     currentVisa: { type: pick(r, F.visaType), expires: toIsoDate(pick(r, F.visaExpires)) },
     address: { residential: pick(r, F.address) },
     location: pick(r, F.location),
     employment: { occupation: pick(r, F.occupation) },
     education: { highest: pick(r, F.education) },
-    serviceTypes: [],
-    addressHistory: [],
+    serviceTypes: parseServiceTypes(rawOf(r, F.serviceType)),
+    addressHistory: [], // the CRM has no address history on a lead
   });
 }
 

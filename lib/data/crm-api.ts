@@ -85,14 +85,16 @@ function pickExpiry(body: unknown, token: string): string {
  * exists to verify against. Drift fails loudly here rather than silently
  * producing blank names. Adjust this schema when staging is up.
  */
+/** Verified against the live CRM 2026-09-27: camelCase, flat, `{count, rows}`. */
 const CrmRow = z.object({
   id: z.number().int(),
-  first_name: z.string().nullish(),
-  last_name: z.string().nullish(),
+  firstName: z.string().nullish(),
+  middleName: z.string().nullish(),
+  lastName: z.string().nullish(),
   email: z.string().nullish(),
   status: z.string().nullish(),
 });
-const CrmList = z.object({ rows: z.array(CrmRow) });
+const CrmList = z.object({ count: z.number().int().optional(), rows: z.array(CrmRow) });
 
 /**
  * Bundled mappings — the §10.3 fallback. Same glob (and same eager parse) as
@@ -171,7 +173,7 @@ export class CrmApiDataSource implements DataSource {
     const { rows } = await this.request(`/${type}?${params}`, CrmList);
     return rows.map((r) => ({
       personRef: { type, id: r.id },
-      displayName: [r.first_name, r.last_name].filter(Boolean).join(' '),
+      displayName: [r.firstName, r.lastName].filter(Boolean).join(' ') || `#${r.id}`,
       email: r.email ?? null,
       subtitle: r.status ?? null,
     }));
