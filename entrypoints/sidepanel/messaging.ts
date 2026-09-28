@@ -5,7 +5,7 @@ import {
   type PasteTarget,
   type Result,
 } from '@/lib/messages';
-import type { FieldMapping } from '@/lib/schema';
+import type { FieldMapping, FieldResult } from '@/lib/schema';
 
 // The Playwright demo opens sidepanel.html as a plain tab, where the extension
 // APIs may be absent. Every helper degrades to an honest error instead of throwing.
@@ -48,6 +48,16 @@ export function onFieldCaptured(cb: (field: FieldMapping) => void): () => void {
   if (!runtime?.id) return () => {};
   const listener = (raw: unknown): void => {
     if (isMessage(raw) && raw.kind === 'RECORD_FIELD_CAPTURED') cb(raw.field);
+  };
+  runtime.onMessage.addListener(listener);
+  return () => runtime.onMessage.removeListener(listener);
+}
+
+/** A value dragged onto a field, already run through the engine (§11.3). */
+export function onDropped(cb: (result: FieldResult) => void): () => void {
+  if (!runtime?.id) return () => {};
+  const listener = (raw: unknown): void => {
+    if (isMessage(raw) && raw.kind === 'DROPPED') cb(raw.result);
   };
   runtime.onMessage.addListener(listener);
   return () => runtime.onMessage.removeListener(listener);

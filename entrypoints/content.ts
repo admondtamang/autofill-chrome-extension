@@ -11,6 +11,7 @@ import {
   type ContentMessage,
   type ContentResponses,
   type PasteTarget,
+  type DroppedMsg,
   type TargetChangedMsg,
   type PaletteValue,
   type RecordFieldCapturedMsg,
@@ -170,6 +171,38 @@ export default defineContentScript({
     window.addEventListener('pagehide', () => {
       target = null;
     });
+
+    /* A value dragged out of the side panel. Chrome does not reliably carry a
+       drag across the panel/page boundary, so this may never fire — click is
+       the dependable path. When it does fire, route it through the SAME engine
+       path a click uses, never the browser's native text drop, so the isUnsafe
+       gate, verify, highlight and the undo snapshot all still apply. */
+    const DRAG_PATH = 'application/x-immifill-value';
+
+    document.addEventListener(
+      'dragover',
+      (ev) => {
+        if (ev.dataTransfer?.types.includes(DRAG_PATH)) ev.preventDefault();
+      },
+      true,
+    );
+
+    document.addEventListener(
+      'drop',
+      (ev) => {
+        const path = ev.dataTransfer?.getData(DRAG_PATH);
+        const value = ev.dataTransfer?.getData('text/plain');
+        if (!path || !value) return; // not ours: leave the page's own behaviour alone
+        ev.preventDefault();
+        ev.stopPropagation();
+        const msg: DroppedMsg = {
+          kind: 'DROPPED',
+          result: dropValue(ev.target, { path, label: path, value, kind: 'text' }),
+        };
+        void chrome.runtime.sendMessage(msg).catch(() => {});
+      },
+      true,
+    );
 
     async function route(
       msg: ContentMessage,

@@ -10,20 +10,6 @@ import type { FieldMapping } from '@/lib/schema';
  * the only value that ever crosses is the one the agent clicks (§11.1).
  */
 
-const bullets = (n: number): string => '•'.repeat(n);
-
-/**
- * §11.2 — first 3 chars, then bullets; an email keeps its domain.
- * A value of 3 chars or fewer masks entirely: "first 3" would be all of it.
- */
-export function maskValue(value: string, kind: PaletteValue['kind']): string {
-  if (kind === 'email') {
-    const at = value.lastIndexOf('@');
-    if (at > 0) return maskValue(value.slice(0, at), 'text') + value.slice(at);
-  }
-  return value.length <= 3 ? bullets(value.length) : value.slice(0, 3) + bullets(value.length - 3);
-}
-
 export function fieldTypeOf(element: Fillable): FieldMapping['type'] {
   if (element instanceof HTMLSelectElement) return 'select';
   if (element instanceof HTMLTextAreaElement) return 'textarea';

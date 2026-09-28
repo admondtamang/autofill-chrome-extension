@@ -8,7 +8,7 @@ import { PersonSearch } from './PersonSearch';
 import { RecordMode } from './RecordMode';
 import { ValueList } from './ValueList';
 import { LoginForm, SessionBar } from './SignIn';
-import { onTabChanged, onTargetChanged, onUnauthorized, send } from './messaging';
+import { onDropped, onTabChanged, onTargetChanged, onUnauthorized, send } from './messaging';
 import './style.css';
 
 export function App() {
@@ -212,7 +212,21 @@ export function App() {
     return onTargetChanged(setTarget);
   }, [detection]);
 
+  // A dragged value reports exactly like a clicked one (§11.3).
+  useEffect(
+    () =>
+      onDropped((result) => {
+        setDrops((prev) => [...prev, result]);
+        if (result.status === 'filled') setCanUndo(true);
+      }),
+    [],
+  );
+
   const paste = async (v: PaletteValue): Promise<void> => {
+    if (target === null) {
+      setPaletteError('Click the field on the page you want this in, then click the value.');
+      return;
+    }
     setPasting(v.path);
     const res = await send({ kind: 'PASTE', path: v.path });
     setPasting(null);

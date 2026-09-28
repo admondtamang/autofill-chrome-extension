@@ -120,11 +120,15 @@ export type RecordFieldCapturedMsg = {
  */
 export type TargetChangedMsg = { kind: 'TARGET_CHANGED'; target: PasteTarget | null };
 
+/** A value dragged from the panel onto a field, already run through the engine. */
+export type DroppedMsg = { kind: 'DROPPED'; result: FieldResult };
+
 export type AnyMessage =
   | PanelMessage
   | ContentMessage
   | RecordFieldCapturedMsg
-  | TargetChangedMsg;
+  | TargetChangedMsg
+  | DroppedMsg;
 
 export const isMessage = (m: unknown): m is AnyMessage =>
   typeof m === 'object' && m !== null && typeof (m as { kind?: unknown }).kind === 'string';

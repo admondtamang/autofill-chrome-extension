@@ -1,18 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { maskValue, targetLabel, dropFieldFor } from '@/lib/palette';
+import { targetLabel, dropFieldFor } from '@/lib/palette';
 import { isUnsafe } from '@/lib/fill-engine/safety';
-
-describe('masking (CONTRACTS §11.2)', () => {
-  it('keeps the first 3 characters and bullets the rest', () => {
-    expect(maskValue('PA1234567', 'text')).toBe('PA1••••••');
-  });
-  it('keeps an email domain so the account is recognisable', () => {
-    expect(maskValue('asdd@yopmail.com', 'email')).toBe('asd•@yopmail.com');
-  });
-  it('masks a short value entirely — "first 3" would be all of it', () => {
-    expect(maskValue('ab', 'text')).toBe('••');
-  });
-});
 
 describe('paste target (CONTRACTS §11.4)', () => {
   it('names a field by its label, not its selector', () => {
