@@ -193,13 +193,13 @@ export function extraValues(body: unknown): PaletteValue[] {
   for (const [key, raw] of Object.entries(rec)) {
     const lower = key.toLowerCase();
     if (mapped.has(lower) || SKIP.has(lower)) continue;
-    if (raw === null || raw === undefined || raw === '') continue;
     // Objects and arrays are structure, not a value someone pastes into a field.
-    if (typeof raw === 'object') continue;
+    // (null is kept: an empty row still tells the agent the field exists.)
+    if (raw !== null && typeof raw === 'object') continue;
     out.push({
       path: `crm.${key}`,
       label: humanise(key),
-      value: String(raw),
+      value: raw === null || raw === undefined ? '' : String(raw),
       kind: /date|expiry|dob/i.test(key) ? 'date' : 'text',
     });
   }

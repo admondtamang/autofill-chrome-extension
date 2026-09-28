@@ -155,7 +155,12 @@ const PALETTE_ROW_FIELDS: readonly Row[] = [
   ['to', 'to', 'date'],
 ];
 
-/** CONTRACTS §11.5 — Array<{ path, label, value, kind }>, empties dropped. */
+/**
+ * CONTRACTS §11.5 — Array<{ path, label, value, kind }>.
+ * Every mapped field is emitted, empty ones included: an agent needs to see
+ * that a person has no passport on file, not have the row silently absent.
+ * An empty `value` renders as "Not set" and is not pasteable.
+ */
 function flattenPayload(p: ApplicantPayload): PaletteValue[] {
   const out: PaletteValue[] = [];
   const push = (path: string, label: string, kind: PaletteValue['kind'], raw: unknown): void => {
@@ -164,7 +169,7 @@ function flattenPayload(p: ApplicantPayload): PaletteValue[] {
       : raw === null || raw === undefined
         ? ''
         : String(raw);
-    if (value !== '') out.push({ path, label, value, kind });
+    out.push({ path, label, value, kind });
   };
   for (const [path, label, kind] of PALETTE_FIELDS) push(path, label, kind, getPath(p, path));
   p.addressHistory.forEach((item, i) => {

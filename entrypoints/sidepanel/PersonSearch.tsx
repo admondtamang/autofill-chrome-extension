@@ -149,7 +149,8 @@ export function PersonSearch({ selected, onSelect }: Props) {
       {results.length > 0 && (
         <ul
           class={cn(
-            'm-0 flex max-h-60 min-w-0 list-none flex-col overflow-x-hidden overflow-y-auto',
+            // Taller rows would otherwise show fewer people in the same box.
+            'm-0 flex max-h-80 min-w-0 list-none flex-col overflow-x-hidden overflow-y-auto',
             'overscroll-contain rounded-lg border p-0',
           )}
           id="person-results"
@@ -163,8 +164,10 @@ export function PersonSearch({ selected, onSelect }: Props) {
               <li
                 key={keyOf(p)}
                 class={[
-                  'relative flex min-h-11 min-w-0 cursor-pointer items-center gap-2',
-                  'border-b px-3 py-2 transition-colors last:border-b-0',
+                  // A row stacks up to three lines (name, status, email), so it
+                  // needs real vertical room — py-2 + leading-tight read as cramped.
+                  'relative flex min-h-16 min-w-0 cursor-pointer items-center gap-2',
+                  'border-b px-3 py-3 transition-colors last:border-b-0',
                   i === active ? 'bg-accent' : 'hover:bg-accent/60',
                   chosen ? 'bg-accent' : '',
                 ].join(' ')}
@@ -178,7 +181,7 @@ export function PersonSearch({ selected, onSelect }: Props) {
                 {chosen && (
                   <span aria-hidden="true" class="absolute inset-y-0 left-0 w-0.5 bg-primary" />
                 )}
-                <span class="min-w-0 flex-1 leading-tight">
+                <span class="flex min-w-0 flex-1 flex-col gap-0.5 leading-snug">
                   <span
                     class={`block truncate ${chosen ? 'font-semibold' : 'font-medium'}`}
                     title={p.displayName}

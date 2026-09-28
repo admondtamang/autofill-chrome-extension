@@ -74,6 +74,29 @@ export function ValueList({
       >
         {values.map((v) => {
           const pasting = busy === v.path;
+
+          // Listed but empty: the CRM has this field and it is unset. Shown so
+          // "no passport on file" is visible, rendered as a plain row because
+          // there is genuinely nothing to paste.
+          if (v.value === '') {
+            return (
+              <li key={v.path} class="min-w-0" data-testid="value-row">
+                <div
+                  class={
+                    'flex min-h-11 w-full min-w-0 flex-col items-start gap-0.5 rounded-lg ' +
+                    'border border-dashed px-3 py-2 opacity-60'
+                  }
+                  data-testid="value-unset"
+                >
+                  <span class="w-full min-w-0 truncate text-[11px] text-muted-foreground">
+                    {v.label}
+                  </span>
+                  <span class="text-[13px] text-muted-foreground italic">Not set</span>
+                </div>
+              </li>
+            );
+          }
+
           return (
             <li key={v.path} class="min-w-0" data-testid="value-row">
               <button

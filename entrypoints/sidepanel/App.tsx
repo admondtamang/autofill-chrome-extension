@@ -19,7 +19,6 @@ import {
   Loading,
   Mark,
   RotateCcw,
-  Separator,
   Spinner,
   TriangleAlert,
   Zap,
@@ -324,6 +323,49 @@ export function App() {
         )}
       </header>
 
+      {/* Primary actions, pinned to the top: filling is why the panel is open,
+          so it stays reachable no matter how far the lists below scroll. */}
+      <div class="sticky top-[45px] z-10 flex min-w-0 gap-2 border-b bg-background px-3 py-2">
+        <Button
+          class="h-9 min-w-0 flex-1 text-sm"
+          data-testid="fill-button"
+          disabled={blocked !== null || filling}
+          aria-busy={filling}
+          title={blocked ?? 'Fill this page'}
+          onClick={() => void fill()}
+        >
+          {filling ? <Spinner /> : <Zap />}
+          {filling ? 'Filling…' : 'Fill this page'}
+        </Button>
+        <Button
+          variant="outline"
+          class="h-9 shrink-0"
+          data-testid="undo-button"
+          disabled={!canUndo || undoing}
+          aria-busy={undoing}
+          title={canUndo ? 'Undo the last fill' : 'Nothing to undo yet.'}
+          onClick={() => void undo()}
+        >
+          {undoing ? <Spinner /> : <RotateCcw />}
+          Undo
+        </Button>
+      </div>
+
+      {(blocked !== null || undoNote !== null) && (
+        <div class="border-b bg-background px-3 pb-2">
+          {blocked !== null && (
+            <Hint class="m-0 text-center" data-testid="fill-blocked">
+              {blocked}
+            </Hint>
+          )}
+          {undoNote !== null && (
+            <Hint class="m-0 text-center" data-testid="undo-note" aria-live="polite">
+              {undoNote}
+            </Hint>
+          )}
+        </div>
+      )}
+
       <main class="flex min-w-0 flex-1 flex-col gap-3 p-3">
         <PageStatus
           detection={detection}
@@ -337,81 +379,35 @@ export function App() {
 
         <PersonSearch selected={person} onSelect={setPerson} />
 
-        {/* The primary action. Heavier border + a full-size button so the eye
-            lands here before anything else on the panel. */}
-        <Card class="gap-2 border-primary/25 shadow-sm">
-          <CardHeader title="Fill" />
-
-          {missing !== null && (
-            <div class="min-w-0" data-testid="preflight">
-              {missing.length === 0 ? (
-                <p class="m-0 flex items-center gap-2 rounded-lg bg-filled-bg px-3 py-2 text-xs font-medium text-filled">
-                  <CircleCheck class="size-3.5" />
-                  Pre-flight passed — all required values are present.
+        {missing !== null && (
+          <div class="min-w-0" data-testid="preflight">
+            {missing.length === 0 ? (
+              <p class="m-0 flex items-center gap-2 rounded-lg bg-filled-bg px-3 py-2 text-xs font-medium text-filled">
+                <CircleCheck class="size-3.5" />
+                Pre-flight passed — all required values are present.
+              </p>
+            ) : (
+              <>
+                <p class="m-0 flex items-center gap-2 rounded-lg bg-missing-bg px-3 py-2 text-xs font-medium text-missing">
+                  <TriangleAlert class="size-3.5" />
+                  {missing.length} required value(s) missing for this person.
                 </p>
-              ) : (
-                <>
-                  <p class="m-0 flex items-center gap-2 rounded-lg bg-missing-bg px-3 py-2 text-xs font-medium text-missing">
-                    <TriangleAlert class="size-3.5" />
-                    {missing.length} required value(s) missing for this person.
-                  </p>
-                  <ul class="m-0 mt-1 max-h-28 list-none overflow-x-hidden overflow-y-auto p-0">
-                    {missing.map((p) => (
-                      <li
-                        key={p}
-                        class="min-w-0 px-2 py-0.5 font-mono text-[11px] wrap-anywhere text-muted-foreground"
-                        data-testid="preflight-missing"
-                      >
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-          )}
-          {preflightError !== null && <ErrorNote>{preflightError}</ErrorNote>}
-
-          <Button
-            class="h-10 w-full text-sm"
-            data-testid="fill-button"
-            disabled={blocked !== null || filling}
-            aria-busy={filling}
-            title={blocked ?? 'Fill this page'}
-            onClick={() => void fill()}
-          >
-            {filling ? <Spinner /> : <Zap />}
-            {filling ? 'Filling…' : 'Fill this page'}
-          </Button>
-          {blocked !== null && (
-            <Hint class="text-center" data-testid="fill-blocked">
-              {blocked}
-            </Hint>
-          )}
-
-          {/* Undo sits below a rule and in the quietest variant there is: it is
-              a recovery path, not a peer of the fill. */}
-          <Separator class="my-0.5" />
-
-          <Button
-            variant="ghost"
-            size="sm"
-            class="w-full"
-            data-testid="undo-button"
-            disabled={!canUndo || undoing}
-            aria-busy={undoing}
-            title={canUndo ? 'Undo the last fill' : 'Nothing to undo yet.'}
-            onClick={() => void undo()}
-          >
-            {undoing ? <Spinner /> : <RotateCcw />}
-            {undoing ? 'Undoing…' : 'Undo fill'}
-          </Button>
-          {undoNote !== null && (
-            <Hint class="text-center" data-testid="undo-note" aria-live="polite">
-              {undoNote}
-            </Hint>
-          )}
-        </Card>
+                <ul class="m-0 mt-1 max-h-28 list-none overflow-x-hidden overflow-y-auto p-0">
+                  {missing.map((p) => (
+                    <li
+                      key={p}
+                      class="min-w-0 px-2 py-0.5 font-mono text-[11px] wrap-anywhere text-muted-foreground"
+                      data-testid="preflight-missing"
+                    >
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
+        {preflightError !== null && <ErrorNote>{preflightError}</ErrorNote>}
 
         <Card>
           <CardHeader title="Values" />
