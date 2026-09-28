@@ -11,8 +11,6 @@ import { LoginForm, SessionBar } from './SignIn';
 import { onDropped, onTabChanged, onTargetChanged, onUnauthorized, send } from './messaging';
 import {
   Button,
-  Card,
-  CardHeader,
   CircleCheck,
   ErrorNote,
   Hint,
@@ -377,7 +375,15 @@ export function App() {
           onEnableSite={() => void enableSite()}
         />
 
-        <PersonSearch selected={person} onSelect={setPerson} />
+        <PersonSearch selected={person} onSelect={setPerson}>
+          <ValueList
+            values={values}
+            target={target}
+            busy={pasting}
+            onPaste={(v) => void paste(v)}
+          />
+          {paletteError !== null && <ErrorNote>{paletteError}</ErrorNote>}
+        </PersonSearch>
 
         {missing !== null && (
           <div class="min-w-0" data-testid="preflight">
@@ -409,16 +415,7 @@ export function App() {
         )}
         {preflightError !== null && <ErrorNote>{preflightError}</ErrorNote>}
 
-        <Card>
-          <CardHeader title="Values" />
-          <ValueList
-            values={values}
-            target={target}
-            busy={pasting}
-            onPaste={(v) => void paste(v)}
-          />
-          {paletteError !== null && <ErrorNote>{paletteError}</ErrorNote>}
-        </Card>
+
 
         <FillReport report={withDrops} busy={filling} error={fillError} />
 

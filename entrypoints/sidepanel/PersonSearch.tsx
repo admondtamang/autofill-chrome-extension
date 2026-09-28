@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { EntityType, type PersonSummary } from '@/lib/schema';
 import { send } from './messaging';
@@ -15,6 +16,7 @@ import {
   Loading,
   Search,
   Select,
+  Separator,
   X,
 } from './ui';
 
@@ -31,11 +33,13 @@ const LABELS: Record<EntityType, string> = {
 const keyOf = (p: PersonSummary): string => `${p.personRef.type}:${p.personRef.id}`;
 
 type Props = {
+  /** Rendered inside this card, under the selection — the person's values. */
+  children?: ComponentChildren;
   selected: PersonSummary | null;
   onSelect: (p: PersonSummary | null) => void;
 };
 
-export function PersonSearch({ selected, onSelect }: Props) {
+export function PersonSearch({ selected, onSelect, children }: Props) {
   const [type, setType] = useState<EntityType>('lead');
   const [q, setQ] = useState('');
   const [results, setResults] = useState<PersonSummary[]>([]);
@@ -231,6 +235,15 @@ export function PersonSearch({ selected, onSelect }: Props) {
             <span class="sr-only">Clear</span>
           </Button>
         </div>
+      )}
+
+      {/* The person and their values are one flow: pick someone, place their
+          details. A separate card made them read as unrelated steps. */}
+      {children !== undefined && (
+        <>
+          <Separator />
+          {children}
+        </>
       )}
     </Card>
   );
