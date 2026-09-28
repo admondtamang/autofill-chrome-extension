@@ -17,7 +17,13 @@ const LOGOUT_ALARM = 'immifill.logout';
 const LOGOUT_LEAD_MS = 60_000; // log out 60s before the token expires
 
 /** Login response. Not in CONTRACTS §1 — `Session` there is a TS interface only. */
-const SessionUser = z.object({ id: z.number().int(), email: z.string() });
+const SessionUser = z.object({
+  id: z.number().int(),
+  email: z.string(),
+  // Drives the admin-only Record mode (roleId === 1). Nullish, so a response
+  // without it still signs in — the panel then fails closed and hides Record.
+  roleId: z.number().int().nullish().transform((v) => v ?? undefined),
+});
 
 const SessionSchema = z.object({
   token: z.string(),

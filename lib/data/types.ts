@@ -14,7 +14,7 @@ export type { EntityType };
 export interface Session {
   token: string;
   expiry: string; // ISO timestamp
-  user: { id: number; email: string };
+  user: { id: number; email: string; roleId?: number }; // roleId 1 = admin
 }
 
 export interface SearchOpts {

@@ -1,350 +1,142 @@
-/* ImmiFill side panel — built for a ~360px Chrome side panel. */
+/* ImmiFill side panel — Tailwind v4 + shadcn/ui design tokens.
+   Built for a ~360px Chrome side panel: nothing here may scroll horizontally.
 
-:root {
-  --bg: #ffffff;
-  --bg-sunken: #f5f6f8;
-  --bg-raised: #ffffff;
-  --line: #d8dce3;
-  --line-strong: #b9c0cb;
-  --ink: #16181d;
-  --ink-soft: #565d6b;
-  --ink-faint: #7b8391;
-  --accent: #1b5cd6;
-  --accent-ink: #ffffff;
-  --focus: #0b57d0;
+   `source(none)` + an explicit @source keeps class scanning to this folder —
+   the rest of the repo has no Tailwind classes, and the panel is the only
+   entrypoint that imports this file. */
+@import 'tailwindcss' source(none);
+@source './*.tsx';
 
-  --filled: #1a7f4b;
-  --filled-bg: #e6f4ec;
-  --missing: #9a6100;
-  --missing-bg: #fdf2dd;
-  --not_found: #4d5560;
-  --not_found-bg: #eceef1;
-  --rejected: #b3261e;
-  --rejected-bg: #fce9e7;
+/* shadcn/ui token map. Utilities read these through @theme inline, so a theme
+   swap only has to redefine the raw custom properties below. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 12px;
-  --s4: 16px;
-  --s5: 24px;
-  --radius: 8px;
+  /* Field statuses. These mirror the in-page highlight colours
+     (immifill-filled / -missing / -not_found / -rejected) and are always
+     paired with an icon + word in the UI — never colour alone. */
+  --color-filled: var(--filled);
+  --color-filled-bg: var(--filled-bg);
+  --color-missing: var(--missing);
+  --color-missing-bg: var(--missing-bg);
+  --color-notfound: var(--notfound);
+  --color-notfound-bg: var(--notfound-bg);
+  --color-rejected: var(--rejected);
+  --color-rejected-bg: var(--rejected-bg);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.505 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.505 0.213 27.5);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.91 0 0);
+  --input: oklch(0.91 0 0);
+  --ring: oklch(0.55 0 0);
+
+  --filled: #14663c;
+  --filled-bg: #e6f4ec;
+  --missing: #7d4e00;
+  --missing-bg: #fdf2dd;
+  --notfound: #454c57;
+  --notfound-bg: #eceef1;
+  --rejected: #a11d16;
+  --rejected-bg: #fce9e7;
+}
+
+/* No theme toggle exists in a side panel, so the OS preference is the whole
+   story. Only the raw properties flip; every utility above is unchanged. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1b1d21;
-    --bg-sunken: #232529;
-    --bg-raised: #26282d;
-    --line: #3a3d44;
-    --line-strong: #4d515a;
-    --ink: #eceef1;
-    --ink-soft: #b4bac4;
-    --ink-faint: #8d94a0;
-    --accent: #7cacf8;
-    --accent-ink: #0b1a33;
-    --focus: #a8c7fa;
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.269 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.72 0 0);
+    --accent: oklch(0.32 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --destructive-foreground: oklch(0.145 0 0);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 18%);
+    --ring: oklch(0.62 0 0);
 
-    --filled: #7ad39f;
-    --filled-bg: #17321f;
-    --missing: #e9bd6a;
-    --missing-bg: #332816;
-    --not_found: #b4bac4;
-    --not_found-bg: #2c2f35;
-    --rejected: #f2a49d;
+    --filled: #86dcaa;
+    --filled-bg: #12301e;
+    --missing: #f0c67a;
+    --missing-bg: #322716;
+    --notfound: #c1c7d1;
+    --notfound-bg: #2c2f35;
+    --rejected: #f7b1aa;
     --rejected-bg: #3a1c19;
   }
 }
 
-* { box-sizing: border-box; }
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-html, body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--ink);
-  font: 400 13px/1.45 system-ui, -apple-system, 'Segoe UI', sans-serif;
-  overflow-x: hidden;
-}
+  html,
+  body {
+    @apply m-0 bg-background font-sans text-[13px] leading-normal text-foreground;
+    /* A 360px panel must never gain a horizontal scrollbar (§ panel width). */
+    overflow-x: hidden;
+  }
 
-#app { max-width: 100%; }
+  #app {
+    @apply min-h-dvh max-w-full;
+  }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s3);
-  padding: var(--s3);
-  min-width: 0;
-}
-
-.app__title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-.card {
-  background: var(--bg-raised);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: var(--s3);
-  min-width: 0;
-}
-
-.card__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s2);
-  margin-bottom: var(--s2);
-}
-
-h2.section {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-label.field {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  margin-bottom: var(--s1);
-}
-
-input[type='text'],
-input[type='search'],
-input[type='email'],
-input[type='password'],
-select {
-  width: 100%;
-  max-width: 100%;
-  padding: 7px 8px;
-  font: inherit;
-  color: var(--ink);
-  background: var(--bg);
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-}
-
-:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
-
-button {
-  font: inherit;
-  font-weight: 600;
-  color: var(--ink);
-  background: var(--bg-sunken);
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  padding: 7px 10px;
-  cursor: pointer;
-}
-
-button:hover:not(:disabled) { border-color: var(--ink-faint); }
-button:disabled { opacity: 0.55; cursor: not-allowed; }
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-  width: 100%;
-}
-
-button.small { padding: 4px 8px; font-size: 12px; font-weight: 600; }
-
-.row {
-  display: flex;
-  gap: var(--s2);
-  align-items: center;
-  min-width: 0;
-}
-.row > * { min-width: 0; }
-.grow { flex: 1 1 auto; }
-
-.muted { color: var(--ink-soft); }
-.hint { font-size: 12px; color: var(--ink-faint); margin: var(--s2) 0 0; }
-.error {
-  margin: var(--s2) 0 0;
-  font-size: 12px;
-  color: var(--rejected);
-  background: var(--rejected-bg);
-  border-radius: 6px;
-  padding: var(--s2);
-  overflow-wrap: anywhere;
-}
-
-/* ── Person search ─────────────────────────────────────────────── */
-
-.results {
-  list-style: none;
-  margin: var(--s2) 0 0;
-  padding: 0;
-  max-height: 232px;
-  overflow-y: auto;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
-
-.result {
-  padding: var(--s2);
-  border-bottom: 1px solid var(--line);
-  cursor: pointer;
-  min-width: 0;
-}
-.result:last-child { border-bottom: 0; }
-.result[aria-selected='true'] { background: var(--bg-sunken); }
-.result.active { box-shadow: inset 3px 0 0 var(--accent); background: var(--bg-sunken); }
-.result__name { font-weight: 600; overflow-wrap: anywhere; }
-.result__meta { font-size: 12px; color: var(--ink-soft); overflow-wrap: anywhere; }
-
-.chosen {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--s2);
-  align-items: flex-start;
-  background: var(--bg-sunken);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: var(--s2);
-  margin-top: var(--s2);
-}
-
-/* ── Page status ───────────────────────────────────────────────── */
-
-.status { display: flex; align-items: baseline; gap: var(--s2); min-width: 0; }
-.dot {
-  flex: 0 0 auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--ink-faint);
-}
-.dot.ok { background: var(--filled); }
-.dot.bad { background: var(--missing); }
-.status__text { overflow-wrap: anywhere; }
-code {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-
-/* ── Pre-flight + report ───────────────────────────────────────── */
-
-.paths { list-style: none; margin: var(--s2) 0 0; padding: 0; }
-.paths li {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 12px;
-  padding: 3px 0;
-  overflow-wrap: anywhere;
-}
-
-.group + .group { margin-top: var(--s3); }
-
-.group__head {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  font-size: 12px;
-  font-weight: 700;
-  padding: 3px var(--s2);
-  border-radius: 5px;
-}
-.group__count { margin-left: auto; font-variant-numeric: tabular-nums; }
-
-.group--filled .group__head { color: var(--filled); background: var(--filled-bg); }
-.group--missing .group__head { color: var(--missing); background: var(--missing-bg); }
-.group--not_found .group__head { color: var(--not_found); background: var(--not_found-bg); }
-.group--rejected .group__head { color: var(--rejected); background: var(--rejected-bg); }
-
-.report__rows { list-style: none; margin: var(--s1) 0 0; padding: 0; }
-.report__row {
-  padding: 3px var(--s2);
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 12px;
-  overflow-wrap: anywhere;
-}
-.report__detail {
-  font-family: system-ui, sans-serif;
-  color: var(--ink-faint);
-  display: block;
-}
-
-/* ── Record mode ───────────────────────────────────────────────── */
-
-.capture {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: var(--s2);
-  margin-top: var(--s2);
-  min-width: 0;
-}
-.capture__selector {
-  display: block;
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
-  font-size: 11px;
-  color: var(--ink-soft);
-  overflow-wrap: anywhere;
-  margin-bottom: var(--s1);
-}
-.capture__type { font-size: 11px; color: var(--ink-faint); }
-
-.switch { display: flex; align-items: center; gap: var(--s2); font-weight: 600; }
-
-/* ── Value list (CONTRACTS §11) ─────────────────────────────────────── */
-.values {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.value-row {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-}
-.value-apply {
-  flex: 1;
-  min-width: 0; /* 360px panel: long values must ellipsis, never widen the row */
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  padding: 6px 8px;
-  text-align: left;
-  background: var(--bg-sunken);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  cursor: pointer;
-}
-.value-apply:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-.value-apply:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-.value-label {
-  font-size: 11px;
-  color: var(--ink-faint);
-}
-.value-text {
-  font-family: ui-monospace, monospace;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.value-reveal {
-  flex: 0 0 auto;
-  align-self: center;
-  font-size: 11px;
-  padding: 3px 7px;
+  /* Long CRM values, emails and ASP.NET selectors wrap rather than widen. */
+  code {
+    @apply font-mono break-words;
+  }
 }

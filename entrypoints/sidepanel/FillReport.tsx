@@ -1,4 +1,18 @@
+import type { JSX } from 'preact';
 import type { FieldStatus, FillReport as Report } from '@/lib/schema';
+import {
+  Badge,
+  Card,
+  CardHeader,
+  CircleCheck,
+  CircleSlash,
+  CircleX,
+  Empty,
+  ErrorNote,
+  Loading,
+  TriangleAlert,
+  Zap,
+} from './ui';
 
 /* Order and wording mirror the in-page highlight classes
    (immifill-filled / -missing / -not_found / -rejected). */
@@ -11,43 +25,76 @@ const TITLES: Record<FieldStatus, string> = {
   missing: 'Missing',
 };
 
+/* Every status carries an icon AND a word, so the four are told apart without
+   relying on hue — the palette matches the in-page highlights, it does not
+   carry the meaning on its own. */
+const ICONS: Record<FieldStatus, (p: { class?: string }) => JSX.Element> = {
+  filled: CircleCheck,
+  rejected: CircleX,
+  not_found: CircleSlash,
+  missing: TriangleAlert,
+};
+
+const TONES: Record<FieldStatus, string> = {
+  filled: 'text-filled bg-filled-bg',
+  rejected: 'text-rejected bg-rejected-bg',
+  not_found: 'text-notfound bg-notfound-bg',
+  missing: 'text-missing bg-missing-bg',
+};
+
 type Props = { report: Report | null; busy: boolean; error: string | null };
 
+/** Paths and statuses only — a value never appears here (CONTRACTS §8.3). */
 export function FillReport({ report, busy, error }: Props) {
   return (
-    <section class="card">
-      <div class="card__head">
-        <h2 class="section">Fill report</h2>
+    <Card>
+      <CardHeader title="Fill report">
         {report !== null && (
-          <span class="hint" style="margin:0">
+          <Badge variant="muted">
             {report.results.length} field{report.results.length === 1 ? '' : 's'}
-          </span>
+          </Badge>
         )}
-      </div>
+      </CardHeader>
 
-      <div data-testid="fill-report" aria-live="polite" aria-busy={busy}>
+      <div
+        class="flex min-w-0 flex-col gap-2"
+        data-testid="fill-report"
+        aria-live="polite"
+        aria-busy={busy}
+      >
         {busy ? (
-          <p class="hint">Filling the page…</p>
+          <Loading>Filling the page…</Loading>
         ) : error !== null ? (
-          <p class="error" role="alert">{error}</p>
+          <ErrorNote>{error}</ErrorNote>
         ) : report === null ? (
-          <p class="hint">No fill yet. Values are never shown here — only field paths.</p>
+          <Empty icon={<Zap class="size-5" />}>
+            No fill yet. Values are never shown here — only field paths.
+          </Empty>
         ) : (
           ORDER.map((status) => {
             const rows = report.results.filter((r) => r.status === status);
             if (rows.length === 0) return null;
+            const Icon = ICONS[status];
             return (
-              <div class={`group group--${status}`} key={status}>
-                <div class="group__head" data-testid={`report-group-${status}`}>
+              <div class="min-w-0" key={status}>
+                <div
+                  class={`flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold ${TONES[status]}`}
+                  data-testid={`report-group-${status}`}
+                >
+                  <Icon class="size-3.5" />
                   <span>{TITLES[status]}</span>
-                  <span class="group__count">{rows.length}</span>
+                  <span class="ml-auto tabular-nums">{rows.length}</span>
                 </div>
-                <ul class="report__rows">
+                <ul class="m-0 mt-1 list-none p-0">
                   {rows.map((r, i) => (
-                    <li class="report__row" data-testid="report-row" key={`${r.path}-${i}`}>
+                    <li
+                      class="min-w-0 px-2 py-1 font-mono text-[11px] wrap-anywhere"
+                      data-testid="report-row"
+                      key={`${r.path}-${i}`}
+                    >
                       {r.path}
                       {r.detail !== undefined && (
-                        <span class="report__detail">{r.detail}</span>
+                        <span class="block font-sans text-muted-foreground">{r.detail}</span>
                       )}
                     </li>
                   ))}
@@ -57,6 +104,6 @@ export function FillReport({ report, busy, error }: Props) {
           })
         )}
       </div>
-    </section>
+    </Card>
   );
 }

@@ -1,6 +1,18 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { FieldMapping, FormMapping } from '@/lib/schema';
 import { onFieldCaptured, send } from './messaging';
+import {
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  ErrorNote,
+  Hint,
+  Radio,
+  Select,
+  Spinner,
+  TriangleAlert,
+} from './ui';
 
 export function RecordMode() {
   const [on, setOn] = useState(false);
@@ -78,34 +90,49 @@ export function RecordMode() {
   const unmapped = captured.filter((f) => f.path === '').length;
 
   return (
-    <section class="card">
-      <div class="card__head">
-        <h2 class="section">Record mode</h2>
-        <button
-          class="small"
+    <Card class="border-dashed">
+      <CardHeader title="Record mode">
+        <Button
+          variant={on ? 'destructive' : 'outline'}
+          size="sm"
           data-testid="record-toggle"
           aria-pressed={on}
           disabled={busy}
+          aria-busy={busy}
           onClick={() => void toggle()}
         >
+          {busy ? <Spinner /> : <Radio />}
           {busy ? 'Working…' : on ? 'Stop recording' : 'Start recording'}
-        </button>
-      </div>
+        </Button>
+      </CardHeader>
 
-      {error !== null && <p class="error" role="alert">{error}</p>}
+      {error !== null && <ErrorNote>{error}</ErrorNote>}
 
-      <p class="hint" data-testid="record-status" aria-live="polite">
+      <p
+        class={`m-0 flex min-w-0 items-center gap-2 rounded-lg px-3 py-2 text-xs wrap-anywhere ${
+          on ? 'bg-rejected-bg text-rejected' : 'bg-muted text-muted-foreground'
+        }`}
+        data-testid="record-status"
+        aria-live="polite"
+      >
+        {on && <span aria-hidden="true" class="size-2 shrink-0 animate-pulse rounded-full bg-current" />}
         {on
           ? `Recording — click a field on the page. ${captured.length} captured.`
           : 'Off. Turn on, then click each field on the page to capture its selector.'}
       </p>
 
       {captured.map((f, i) => (
-        <div class="capture" data-testid="capture-row" key={`${f.selector}-${i}`}>
-          <code class="capture__selector">{f.selector}</code>
-          <div class="row">
-            <select
-              class="grow"
+        <div
+          class="flex min-w-0 flex-col gap-2 rounded-lg border p-2"
+          data-testid="capture-row"
+          key={`${f.selector}-${i}`}
+        >
+          <code class="block min-w-0 text-[11px] wrap-anywhere text-muted-foreground">
+            {f.selector}
+          </code>
+          <div class="flex min-w-0 items-center gap-2">
+            <Select
+              class="h-8 flex-1 text-xs"
               data-testid="capture-path"
               aria-label={`Payload path for ${f.selector}`}
               value={f.path}
@@ -113,10 +140,12 @@ export function RecordMode() {
             >
               <option value="">— pick a payload path —</option>
               {paths.map((p) => (
-                <option key={p} value={p}>{p}</option>
+                <option key={p} value={p}>
+                  {p}
+                </option>
               ))}
-            </select>
-            <span class="capture__type">{f.type}</span>
+            </Select>
+            <Badge variant="muted">{f.type}</Badge>
           </div>
         </div>
       ))}
@@ -124,19 +153,34 @@ export function RecordMode() {
       {captured.length > 0 && (
         <>
           {unmapped > 0 && (
-            <p class="hint">{unmapped} captured field(s) still have no payload path.</p>
+            <p class="m-0 flex items-center gap-2 text-xs text-missing">
+              <TriangleAlert class="size-3.5" />
+              {unmapped} captured field(s) still have no payload path.
+            </p>
           )}
-          <div class="row" style="margin-top:12px">
-            <button class="grow" data-testid="record-copy" onClick={() => void copy()}>
+          <div class="flex min-w-0 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              class="flex-1"
+              data-testid="record-copy"
+              onClick={() => void copy()}
+            >
               Copy JSON
-            </button>
-            <button class="grow" data-testid="record-download" onClick={() => void download()}>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              class="flex-1"
+              data-testid="record-download"
+              onClick={() => void download()}
+            >
               Download
-            </button>
+            </Button>
           </div>
-          {note !== null && <p class="hint" data-testid="record-note">{note}</p>}
+          {note !== null && <Hint data-testid="record-note">{note}</Hint>}
         </>
       )}
-    </section>
+    </Card>
   );
 }

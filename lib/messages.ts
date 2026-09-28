@@ -41,7 +41,8 @@ export type PaletteValue = {
 };
 
 /** What the panel may know about a session — never the token (CONTRACTS §10.1). */
-export type SessionUser = { id: number; email: string };
+/** `roleId === 1` is the CRM's admin. Optional: an older token may predate it. */
+export type SessionUser = { id: number; email: string; roleId?: number };
 
 export type PanelMessage =
   | SearchMsg

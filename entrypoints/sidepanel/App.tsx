@@ -9,6 +9,21 @@ import { RecordMode } from './RecordMode';
 import { ValueList } from './ValueList';
 import { LoginForm, SessionBar } from './SignIn';
 import { onDropped, onTabChanged, onTargetChanged, onUnauthorized, send } from './messaging';
+import {
+  Button,
+  Card,
+  CardHeader,
+  CircleCheck,
+  ErrorNote,
+  Hint,
+  Loading,
+  Mark,
+  RotateCcw,
+  Separator,
+  Spinner,
+  TriangleAlert,
+  Zap,
+} from './ui';
 import './style.css';
 
 export function App() {
@@ -273,119 +288,147 @@ export function App() {
 
   if (session === null) {
     return (
-      <main class="app">
-        <h1 class="app__title">ImmiFill</h1>
-        <p class="hint">Checking your session…</p>
-      </main>
+      <div class="flex min-h-dvh flex-col items-center justify-center gap-3 p-5">
+        <Mark class="size-10 rounded-xl" />
+        <Loading>Checking your session…</Loading>
+      </div>
     );
   }
 
   if (!session.signedIn) {
     return (
-      <main class="app">
-        <h1 class="app__title">ImmiFill</h1>
-        <LoginForm
-          busy={authBusy}
-          error={authError}
-          expired={expired}
-          onSubmit={(email, password) => void signIn(email, password)}
-        />
-      </main>
+      <LoginForm
+        busy={authBusy}
+        error={authError}
+        expired={expired}
+        onSubmit={(email, password) => void signIn(email, password)}
+      />
     );
   }
 
   return (
-    <main class="app">
-      <h1 class="app__title">ImmiFill</h1>
-
-      {session.user !== undefined && (
-        <SessionBar
-          user={session.user}
-          expiry={session.expiry}
-          busy={authBusy}
-          onSignOut={() => void signOut()}
-        />
-      )}
-
-      <PageStatus
-        detection={detection}
-        loading={detecting}
-        error={detectError}
-        enabling={enabling}
-        enableNote={enableNote}
-        onRedetect={() => void detect()}
-        onEnableSite={() => void enableSite()}
-      />
-
-      <PersonSearch selected={person} onSelect={setPerson} />
-
-      <section class="card">
-        <div class="card__head">
-          <h2 class="section">Fill</h2>
-        </div>
-
-        {missing !== null && (
-          <div data-testid="preflight">
-            {missing.length === 0 ? (
-              <p class="hint">Pre-flight: all required values are present.</p>
-            ) : (
-              <>
-                <p class="hint">
-                  Pre-flight: {missing.length} required value(s) missing for this person.
-                </p>
-                <ul class="paths">
-                  {missing.map((p) => (
-                    <li key={p} data-testid="preflight-missing">{p}</li>
-                  ))}
-                </ul>
-              </>
-            )}
+    <div class="flex min-h-dvh flex-col">
+      {/* One compact identity bar. Everything below it is work. */}
+      <header class="sticky top-0 z-20 flex min-w-0 items-center gap-2 border-b bg-background px-3 py-2">
+        <Mark />
+        <h1 class="m-0 text-sm font-semibold tracking-tight">ImmiFill</h1>
+        {session.user !== undefined && (
+          <div class="ml-auto flex min-w-0 max-w-[62%] justify-end">
+            <SessionBar
+              user={session.user}
+              expiry={session.expiry}
+              busy={authBusy}
+              onSignOut={() => void signOut()}
+            />
           </div>
         )}
-        {preflightError !== null && <p class="error" role="alert">{preflightError}</p>}
+      </header>
 
-        <div style="margin-top:12px">
-          <button
-            class="primary"
+      <main class="flex min-w-0 flex-1 flex-col gap-3 p-3">
+        <PageStatus
+          detection={detection}
+          loading={detecting}
+          error={detectError}
+          enabling={enabling}
+          enableNote={enableNote}
+          onRedetect={() => void detect()}
+          onEnableSite={() => void enableSite()}
+        />
+
+        <PersonSearch selected={person} onSelect={setPerson} />
+
+        {/* The primary action. Heavier border + a full-size button so the eye
+            lands here before anything else on the panel. */}
+        <Card class="gap-2 border-primary/25 shadow-sm">
+          <CardHeader title="Fill" />
+
+          {missing !== null && (
+            <div class="min-w-0" data-testid="preflight">
+              {missing.length === 0 ? (
+                <p class="m-0 flex items-center gap-2 rounded-lg bg-filled-bg px-3 py-2 text-xs font-medium text-filled">
+                  <CircleCheck class="size-3.5" />
+                  Pre-flight passed — all required values are present.
+                </p>
+              ) : (
+                <>
+                  <p class="m-0 flex items-center gap-2 rounded-lg bg-missing-bg px-3 py-2 text-xs font-medium text-missing">
+                    <TriangleAlert class="size-3.5" />
+                    {missing.length} required value(s) missing for this person.
+                  </p>
+                  <ul class="m-0 mt-1 max-h-28 list-none overflow-x-hidden overflow-y-auto p-0">
+                    {missing.map((p) => (
+                      <li
+                        key={p}
+                        class="min-w-0 px-2 py-0.5 font-mono text-[11px] wrap-anywhere text-muted-foreground"
+                        data-testid="preflight-missing"
+                      >
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+          {preflightError !== null && <ErrorNote>{preflightError}</ErrorNote>}
+
+          <Button
+            class="h-10 w-full text-sm"
             data-testid="fill-button"
             disabled={blocked !== null || filling}
+            aria-busy={filling}
             title={blocked ?? 'Fill this page'}
             onClick={() => void fill()}
           >
+            {filling ? <Spinner /> : <Zap />}
             {filling ? 'Filling…' : 'Fill this page'}
-          </button>
-        </div>
-        {blocked !== null && (
-          <p class="hint" data-testid="fill-blocked">{blocked}</p>
-        )}
+          </Button>
+          {blocked !== null && (
+            <Hint class="text-center" data-testid="fill-blocked">
+              {blocked}
+            </Hint>
+          )}
 
-        <div class="row" style="margin-top:8px">
-          <button
-            class="grow"
+          {/* Undo sits below a rule and in the quietest variant there is: it is
+              a recovery path, not a peer of the fill. */}
+          <Separator class="my-0.5" />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            class="w-full"
             data-testid="undo-button"
             disabled={!canUndo || undoing}
+            aria-busy={undoing}
             title={canUndo ? 'Undo the last fill' : 'Nothing to undo yet.'}
             onClick={() => void undo()}
           >
+            {undoing ? <Spinner /> : <RotateCcw />}
             {undoing ? 'Undoing…' : 'Undo fill'}
-          </button>
-        </div>
-        {undoNote !== null && (
-          <p class="hint" data-testid="undo-note" aria-live="polite">{undoNote}</p>
-        )}
-      </section>
+          </Button>
+          {undoNote !== null && (
+            <Hint class="text-center" data-testid="undo-note" aria-live="polite">
+              {undoNote}
+            </Hint>
+          )}
+        </Card>
 
-      <section class="card">
-        <div class="card__head">
-          <h2 class="section">Values</h2>
-        </div>
-        <ValueList values={values} target={target} busy={pasting} onPaste={(v) => void paste(v)} />
-        {paletteError !== null && <p class="error" role="alert">{paletteError}</p>}
-      </section>
+        <Card>
+          <CardHeader title="Values" />
+          <ValueList
+            values={values}
+            target={target}
+            busy={pasting}
+            onPaste={(v) => void paste(v)}
+          />
+          {paletteError !== null && <ErrorNote>{paletteError}</ErrorNote>}
+        </Card>
 
-      <FillReport report={withDrops} busy={filling} error={fillError} />
+        <FillReport report={withDrops} busy={filling} error={fillError} />
 
-      <RecordMode />
-    </main>
+        {/* Record mode builds form mappings — admins only (roleId === 1). */}
+        {session?.user?.roleId === 1 && <RecordMode />}
+      </main>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { SessionUser } from '@/lib/messages';
+import { Button, Card, ErrorNote, Input, Label, LogOut, Mark, Spinner } from './ui';
 
 type LoginProps = {
   busy: boolean;
@@ -14,66 +15,79 @@ export function LoginForm({ busy, error, expired, onSubmit }: LoginProps) {
   const [email, setEmail] = useState('');
 
   return (
-    <section class="card">
-      <div class="card__head">
-        <h2 class="section">Sign in</h2>
-      </div>
-
-      {expired && (
-        <p class="hint" data-testid="session-expired">
-          Your session expired — sign in to continue.
+    <div class="flex min-h-dvh flex-col justify-center gap-5 p-5">
+      <header class="flex flex-col items-center gap-2 text-center">
+        <Mark class="size-10 rounded-xl" />
+        <h1 class="m-0 text-lg font-semibold tracking-tight">ImmiFill</h1>
+        <p class="m-0 text-xs text-muted-foreground">
+          Fill ImmiAccount forms from a Success CRM record.
         </p>
-      )}
+      </header>
 
-      <form
-        data-testid="login-form"
-        onSubmit={(e: Event) => {
-          e.preventDefault();
-          const form = e.currentTarget as HTMLFormElement;
-          const password = (form.elements.namedItem('password') as HTMLInputElement).value;
-          onSubmit(email.trim(), password);
-          form.reset(); // the password never lingers in the DOM or in state
-        }}
-      >
-        <label class="field" for="login-email">
-          Email
-        </label>
-        <input
-          id="login-email"
-          data-testid="login-email"
-          name="email"
-          type="email"
-          autocomplete="username"
-          required
-          value={email}
-          onInput={(e) => setEmail((e.currentTarget as HTMLInputElement).value)}
-        />
+      <Card>
+        {expired && (
+          <p
+            class="m-0 rounded-lg bg-muted px-3 py-2 text-xs text-foreground"
+            data-testid="session-expired"
+          >
+            Your session expired — sign in to continue.
+          </p>
+        )}
 
-        <label class="field" for="login-password" style="margin-top:12px">
-          Password
-        </label>
-        <input
-          id="login-password"
-          data-testid="login-password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
-          required
-        />
+        <form
+          class="flex flex-col gap-3"
+          data-testid="login-form"
+          onSubmit={(e: Event) => {
+            e.preventDefault();
+            const form = e.currentTarget as HTMLFormElement;
+            const password = (form.elements.namedItem('password') as HTMLInputElement).value;
+            onSubmit(email.trim(), password);
+            form.reset(); // the password never lingers in the DOM or in state
+          }}
+        >
+          <div>
+            <Label for="login-email">Email</Label>
+            <Input
+              id="login-email"
+              data-testid="login-email"
+              name="email"
+              type="email"
+              autocomplete="username"
+              placeholder="you@company.com"
+              required
+              value={email}
+              onInput={(e) => setEmail((e.currentTarget as HTMLInputElement).value)}
+            />
+          </div>
 
-        <div style="margin-top:12px">
-          <button class="primary" data-testid="login-submit" type="submit" disabled={busy}>
+          <div>
+            <Label for="login-password">Password</Label>
+            <Input
+              id="login-password"
+              data-testid="login-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <Button
+            class="mt-1 w-full"
+            data-testid="login-submit"
+            type="submit"
+            disabled={busy}
+            aria-busy={busy}
+          >
+            {busy && <Spinner />}
             {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-        </div>
-      </form>
+          </Button>
+        </form>
 
-      {error !== null && (
-        <p class="error" role="alert" data-testid="login-error">
-          {error}
-        </p>
-      )}
-    </section>
+        {error !== null && <ErrorNote data-testid="login-error">{error}</ErrorNote>}
+      </Card>
+    </div>
   );
 }
 
@@ -94,18 +108,29 @@ const at = (iso: string): string | null => {
 export function SessionBar({ user, expiry, busy, onSignOut }: BarProps) {
   const until = expiry === undefined ? null : at(expiry);
   return (
-    <div class="row" data-testid="session-bar">
-      <span class="grow">
-        <span data-testid="session-user">{user.email}</span>
+    <div class="flex min-w-0 items-center gap-2" data-testid="session-bar">
+      <span class="min-w-0 flex-1 leading-tight">
+        <span class="block truncate text-xs font-medium" title={user.email} data-testid="session-user">
+          {user.email}
+        </span>
         {until !== null && (
-          <span class="hint" style="margin:0;display:block" data-testid="session-expiry">
+          <span class="block text-[11px] text-muted-foreground" data-testid="session-expiry">
             Signs out at {until}
           </span>
         )}
       </span>
-      <button class="small" data-testid="sign-out" disabled={busy} onClick={onSignOut}>
-        Sign out
-      </button>
+      <Button
+        variant="ghost"
+        size="sm"
+        class="px-2"
+        data-testid="sign-out"
+        disabled={busy}
+        title="Sign out"
+        onClick={onSignOut}
+      >
+        <LogOut />
+        <span class="sr-only">Sign out</span>
+      </Button>
     </div>
   );
 }
