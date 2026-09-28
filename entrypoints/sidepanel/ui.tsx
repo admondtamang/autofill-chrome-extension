@@ -351,6 +351,12 @@ export const LogOut = (p: IconProps) => (
   </Svg>
 );
 
+export const ChevronLeft = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="m15 18-6-6 6-6" />
+  </Svg>
+);
+
 export const X = (p: IconProps) => (
   <Svg {...p}>
     <path d="M18 6 6 18M6 6l12 12" />
