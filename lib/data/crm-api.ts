@@ -174,16 +174,16 @@ export class CrmApiDataSource implements DataSource {
   async search(
     type: EntityType,
     q: string,
-    { order = 'asc', orderBy = 'firstName', limit = 25 }: SearchOpts = {},
+    { limit = 25 }: SearchOpts = {},
   ): Promise<PersonSummary[]> {
-    const params = new URLSearchParams({
-      q,
-      order,
-      order_by: orderBy,
-      limit: String(limit),
-    });
-    const { rows } = await this.request(`/${type}?${params}`, CrmList);
-    return rows.map((r) => ({
+    // Only `q`, and only when non-empty. The proven-working call is
+    // `/lead?q=quin`; order/order_by/limit came from the backend PRD and are
+    // unverified here, and an unknown param is what a strict validator 422s on.
+    // The list is trimmed client-side instead.
+    const query = q.trim();
+    const path = query === '' ? `/${type}` : `/${type}?${new URLSearchParams({ q: query })}`;
+    const { rows } = await this.request(path, CrmList);
+    return rows.slice(0, limit).map((r) => ({
       personRef: { type, id: r.id },
       displayName: [r.firstName, r.lastName].filter(Boolean).join(' ') || `#${r.id}`,
       email: r.email ?? null,
