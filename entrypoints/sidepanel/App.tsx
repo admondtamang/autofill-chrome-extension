@@ -240,7 +240,7 @@ export function App() {
       return;
     }
     setPasting(v.path);
-    const res = await send({ kind: 'PASTE', path: v.path });
+    const res = await send({ kind: 'PASTE', value: v });
     setPasting(null);
     if (!res.ok) {
       setPaletteError(res.error);

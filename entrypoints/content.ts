@@ -239,6 +239,9 @@ export default defineContentScript({
           if (msg.on) {
             captured = [];
             stopRecording = startRecording((field: FieldMapping) => {
+              // One row per field: clicking the same input again re-picks it,
+              // it does not add a duplicate to the mapping being built.
+              if (captured.some((c) => c.selector === field.selector)) return;
               captured.push(field);
               const broadcast: RecordFieldCapturedMsg = { kind: 'RECORD_FIELD_CAPTURED', field };
               void chrome.runtime.sendMessage(broadcast).catch(() => {});

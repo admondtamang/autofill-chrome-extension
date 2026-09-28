@@ -30,7 +30,13 @@ export function RecordMode() {
 
   useEffect(() => {
     if (!on) return;
-    return onFieldCaptured((field) => setCaptured((prev) => [...prev, field]));
+    // One row per field. Clicking the same input again re-picks it rather than
+    // adding a duplicate, and a re-subscribe cannot double an existing row.
+    return onFieldCaptured((field) =>
+      setCaptured((prev) =>
+        prev.some((f) => f.selector === field.selector) ? prev : [...prev, field],
+      ),
+    );
   }, [on]);
 
   const toggle = async (): Promise<void> => {

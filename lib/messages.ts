@@ -26,7 +26,7 @@ export type LoginMsg = { kind: 'LOGIN'; email: string; password: string };
 export type LogoutMsg = { kind: 'LOGOUT' };
 export type SessionMsg = { kind: 'SESSION' };
 export type ValuesMsg = { kind: 'VALUES'; type: EntityType; personId: number };
-export type PasteMsg = { kind: 'PASTE'; path: string };
+export type PasteMsg = { kind: 'PASTE'; value: PaletteValue };
 export type TargetMsg = { kind: 'TARGET' };
 
 /** The field the agent last focused on the page. Identity, never a value (§11.4). */

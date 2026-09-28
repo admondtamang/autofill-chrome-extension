@@ -181,13 +181,6 @@ function flattenPayload(p: ApplicantPayload): PaletteValue[] {
   return out;
 }
 
-/**
- * The flattened list for the person the panel is showing. Values live here only
- * while the panel has them on screen; cleared on person change and on logout,
- * never persisted (§11 amendment to §8.2).
- */
-let cachedValues: PaletteValue[] = [];
-
 const PANEL_KINDS: ReadonlySet<string> = new Set<PanelMessage['kind']>([
   'SEARCH', 'DETECT', 'PREFLIGHT', 'FILL', 'UNDO',
   'ENABLE_SITE', 'RECORD_MODE', 'RECORD_GET', 'PAYLOAD_PATHS',
@@ -287,16 +280,16 @@ export async function route(msg: PanelMessage): Promise<Result<PanelResponses[Pa
       // enough to flatten it. The side panel then owns the list; nothing is put
       // into the page until the agent clicks a value (§11.1).
       const payload = holdPayload(await dataSource.getPayload(msg.type, msg.personId));
+      let flat: PaletteValue[];
       try {
-        cachedValues = flattenPayload(payload);
+        flat = flattenPayload(payload);
       } finally {
         releasePayload();
       }
       // §11.6 — plus the CRM fields ApplicantPayload has no slot for, so the
       // list reflects the record rather than just what the engine can map.
       const extra = (await dataSource.extraValues?.(msg.type, msg.personId)) ?? [];
-      cachedValues = [...cachedValues, ...extra];
-      return ok(cachedValues);
+      return ok([...flat, ...extra]);
     }
 
     case 'TARGET': {
@@ -305,8 +298,10 @@ export async function route(msg: PanelMessage): Promise<Result<PanelResponses[Pa
     }
 
     case 'PASTE': {
-      const value = cachedValues.find((v) => v.path === msg.path);
-      if (!value) return err('That value is no longer loaded — reselect the person.');
+      // The value travels with the message. The worker holds no lookup table:
+      // MV3 kills it after ~30s idle, so anything module-level is gone by the
+      // time the agent actually clicks.
+      const value = msg.value;
       const { id } = await activeTab();
       return ok(await toTab(id, { kind: 'PASTE_INTO', value }));
     }
