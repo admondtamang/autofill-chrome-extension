@@ -8,8 +8,9 @@ import {
   type PersonSummary,
 } from '@/lib/schema';
 import type { DataSource, SearchOpts, Session } from '@/lib/data/types';
+import type { PaletteValue } from '@/lib/messages';
 import { NotFoundError, UnauthorizedError } from '@/lib/data/errors';
-import { toApplicantPayload } from '@/lib/data/crm-map';
+import { extraValues, toApplicantPayload } from '@/lib/data/crm-map';
 
 const SESSION_KEY = 'immifill.session';
 const LOGOUT_ALARM = 'immifill.logout';
@@ -80,12 +81,10 @@ function pickExpiry(body: unknown, token: string): string {
 }
 
 /**
- * A row from an existing CRM list endpoint (`/lead`, `/student`, ...).
- * ponytail: field names assumed from the CRM list contract; no staging backend
- * exists to verify against. Drift fails loudly here rather than silently
- * producing blank names. Adjust this schema when staging is up.
+ * A row from a CRM list endpoint (`/lead`, `/student`, ...).
+ * Verified against the live CRM 2026-09-27: camelCase, flat, `{count, rows}`.
+ * Drift fails loudly here rather than silently producing blank names.
  */
-/** Verified against the live CRM 2026-09-27: camelCase, flat, `{count, rows}`. */
 const CrmRow = z.object({
   id: z.number().int(),
   firstName: z.string().nullish(),
@@ -108,6 +107,13 @@ export class CrmApiDataSource implements DataSource {
   private alarmBound = false;
   /** In-memory only (§10.3): path -> last validated body + its ETag. */
   private readonly mappingCache = new Map<string, { etag: string; value: unknown }>();
+  /**
+   * The last record fetched, so getPayload + extraValues cost one round trip.
+   * This holds real applicant PII, so it lives under the same custody rule as
+   * the worker's payload (§8.2): dropped after 60s and on logout, never stored.
+   */
+  private lastRecord: { key: string; body: unknown } | null = null;
+  private recordTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly base: string) {}
 
@@ -186,8 +192,29 @@ export class CrmApiDataSource implements DataSource {
    * those become `missing` in the fill report, not a failed fetch.
    */
   async getPayload(type: EntityType, id: number): Promise<ApplicantPayload> {
-    const body = await this.request(`/${type}/${id}`, z.unknown());
-    return toApplicantPayload(type, id, body);
+    return toApplicantPayload(type, id, await this.record(type, id));
+  }
+
+  /** §11.6 — everything the payload mapping had no home for. */
+  async extraValues(type: EntityType, id: number): Promise<PaletteValue[]> {
+    return extraValues(await this.record(type, id));
+  }
+
+  /** One fetch serves both the payload and the extra values. */
+  private async record(type: EntityType, id: number): Promise<unknown> {
+    const key = `${type}/${id}`;
+    if (this.lastRecord?.key === key) return this.lastRecord.body;
+    const body = await this.request(`/${key}`, z.unknown());
+    this.lastRecord = { key, body };
+    clearTimeout(this.recordTimer);
+    this.recordTimer = setTimeout(() => this.forgetRecord(), 60_000);
+    return body;
+  }
+
+  private forgetRecord(): void {
+    clearTimeout(this.recordTimer);
+    this.recordTimer = undefined;
+    this.lastRecord = null;
   }
 
   listMappings(): Promise<MappingIndexEntry[]> {
@@ -293,6 +320,7 @@ export class CrmApiDataSource implements DataSource {
   }
 
   private async clearSession(): Promise<void> {
+    this.forgetRecord(); // no applicant data outlives the session
     await chrome.storage.session.remove(SESSION_KEY);
     await chrome.alarms.clear(LOGOUT_ALARM);
   }

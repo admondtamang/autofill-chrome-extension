@@ -1,3 +1,4 @@
+import type { PaletteValue } from '@/lib/messages';
 import type {
   ApplicantPayload,
   EntityType,
@@ -29,4 +30,9 @@ export interface DataSource {
   listMappings(): Promise<MappingIndexEntry[]>;
   getMapping(formKey: string): Promise<FormMapping>;
   audit(entry: FillAudit): Promise<void>;
+  /**
+   * §11.6 — CRM fields with no home in ApplicantPayload, offered in the value
+   * list so manual placement is not limited to what the fill engine maps.
+   */
+  extraValues?(type: EntityType, id: number): Promise<PaletteValue[]>;
 }

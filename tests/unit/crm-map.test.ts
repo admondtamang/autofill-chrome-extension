@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { toApplicantPayload, toIsoDate, parseServiceTypes, splitCountry } from '@/lib/data/crm-map';
+import {
+  extraValues,
+  parseServiceTypes,
+  splitCountry,
+  toApplicantPayload,
+  toIsoDate,
+} from '@/lib/data/crm-map';
 
 // Records copied from the live CRM (2026-09-27). Field names verified, values
 // are the CRM's own lorem-ipsum test data — no real client information.
@@ -67,5 +73,30 @@ describe('real CRM lead -> ApplicantPayload', () => {
     expect(splitCountry('NPL')).toEqual({ code: 'NPL', label: null });
     expect(splitCountry('Nepal')).toEqual({ code: null, label: 'Nepal' });
     expect(splitCountry(null)).toEqual({ code: null, label: null });
+  });
+});
+
+describe('extra CRM values (§11.6)', () => {
+  it('offers fields ApplicantPayload has no slot for', () => {
+    const extras = extraValues(LEAD_35);
+    const paths = extras.map((e) => e.path);
+    expect(paths).toContain('crm.status'); // "New" — useful to paste, never mapped
+    // ...but never the mapped ones, which the payload already lists.
+    expect(paths).not.toContain('crm.firstName');
+    expect(paths).not.toContain('crm.email');
+  });
+
+  it('skips ids, audit timestamps and nested structures', () => {
+    const extras = extraValues({
+      id: 35, userId: 1, updatedBy: 1, createdAt: 'x', updatedAt: 'x', deletedAt: null,
+      files: [{ name: 'a.pdf' }], clientIds: { studentId: [] }, user: { firstName: 'Super' },
+      remarks: 'call back',
+    });
+    expect(extras.map((e) => e.path)).toEqual(['crm.remarks']);
+  });
+
+  it('humanises the label', () => {
+    const [only] = extraValues({ leadStage: 'Contacted' });
+    expect(only?.label).toBe('Lead stage');
   });
 });

@@ -1,4 +1,5 @@
 import { ApplicantPayload, type EntityType } from '@/lib/schema';
+import type { PaletteValue } from '@/lib/messages';
 
 /**
  * Maps a real Success CRM record onto `ApplicantPayload`.
@@ -157,4 +158,50 @@ export function toApplicantPayload(type: EntityType, id: number, body: unknown):
 export function unmappedKeys(body: unknown): string[] {
   const known = new Set(Object.values(F).flat().map((k) => k.toLowerCase()));
   return Object.keys(unwrapRecord(body)).filter((k) => !known.has(k.toLowerCase()));
+}
+
+/**
+ * CRM fields the payload mapping has no home for, as extra rows for the value
+ * list (§11.6). `ApplicantPayload` is the shape the FILL ENGINE needs; the
+ * value list is for manual placement, where `status` or an ANZSCO code is just
+ * as worth pasting. Without this the panel shows a handful of rows from a
+ * 40-key record.
+ *
+ * Skipped: internal ids, audit timestamps, and nested objects/arrays — none of
+ * them are things an agent would paste into a government form.
+ */
+const SKIP = new Set([
+  'id', 'userid', 'sourceid', 'branchid', 'updatedby', 'studentid', 'skillassessmentid',
+  'visaapplicantid', 'insuranceapplicantid', 'tribunalreviewid',
+  'createdat', 'updatedat', 'deletedat', 'reopenedat', 'leadstagehistory',
+]);
+
+/** `firstName` -> `First name`; `anzsco` -> `Anzsco`. */
+function humanise(key: string): string {
+  const spaced = key
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .trim()
+    .toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+export function extraValues(body: unknown): PaletteValue[] {
+  const rec = unwrapRecord(body);
+  const mapped = new Set(Object.values(F).flat().map((k) => k.toLowerCase()));
+  const out: PaletteValue[] = [];
+  for (const [key, raw] of Object.entries(rec)) {
+    const lower = key.toLowerCase();
+    if (mapped.has(lower) || SKIP.has(lower)) continue;
+    if (raw === null || raw === undefined || raw === '') continue;
+    // Objects and arrays are structure, not a value someone pastes into a field.
+    if (typeof raw === 'object') continue;
+    out.push({
+      path: `crm.${key}`,
+      label: humanise(key),
+      value: String(raw),
+      kind: /date|expiry|dob/i.test(key) ? 'date' : 'text',
+    });
+  }
+  return out;
 }

@@ -287,6 +287,10 @@ export async function route(msg: PanelMessage): Promise<Result<PanelResponses[Pa
       } finally {
         releasePayload();
       }
+      // §11.6 — plus the CRM fields ApplicantPayload has no slot for, so the
+      // list reflects the record rather than just what the engine can map.
+      const extra = (await dataSource.extraValues?.(msg.type, msg.personId)) ?? [];
+      cachedValues = [...cachedValues, ...extra];
       return ok(cachedValues);
     }
 
