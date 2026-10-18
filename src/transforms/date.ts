@@ -20,6 +20,13 @@ export function transformDate(
   const str = (raw as string).trim();
   if (str === "") return undefined;
 
+  // MM/DD/YYYY (e.g. "10/14/2026") — reformat to YYYY-MM-DD
+  const mdyMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(str);
+  if (mdyMatch) {
+    const [, m, d, y] = mdyMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
   // Date-only: YYYY-MM-DD (or YYYY-MM-DD prefix) — return as-is
   if (!str.includes("T")) {
     return str;

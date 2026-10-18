@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { RecordDefinition } from "@/shared/contracts/recordType";
 import type { ApplicantProfile } from "@/shared/types/applicantProfile";
 import { transformDate } from "@/transforms/date";
+import { transformCountry } from "@/transforms/country";
 import { transformNotes } from "@/transforms/notes";
 import { isEmptyValue } from "@/transforms/empty";
 
@@ -53,6 +54,14 @@ export const baseRowSchema = z
     // --- Contact ---
     email: z.string().nullable().optional(),
     phone: z.string().nullable().optional(),
+
+    // --- Lead-specific fields (different field names / extra) ---
+    visa: z.string().nullable().optional(),          // lead: current visa (visaApplicant uses currentVisa)
+    address: z.string().nullable().optional(),        // lead: full address string
+    serviceType: z.string().nullable().optional(),    // lead: JSON-encoded array string
+    qualification: z.string().nullable().optional(),  // lead: qualification
+    user: z.unknown().nullable().optional(),          // nested assigned-user object (internal)
+    source: z.unknown().nullable().optional(),        // nested lead source object (internal)
 
     // --- Location / visa ---
     location: z.string().nullable().optional(),
@@ -108,7 +117,7 @@ export type VisaApplicantRow = z.infer<typeof baseRowSchema>;
 // ---------------------------------------------------------------------------
 
 /** Fields that are NEVER surfaced in ApplicantProfile */
-const INTERNAL_FIELDS = new Set([
+export const INTERNAL_FIELDS = new Set([
   "id",
   "userId",
   "updatedBy",
@@ -120,10 +129,13 @@ const INTERNAL_FIELDS = new Set([
   "invoiceNumber",
   "payment",
   "paymentStatus",
+  // Lead-specific internal objects
+  "user",
+  "source",
 ]);
 
 /** Fields that are explicitly mapped to profile paths (not extras) */
-const MAPPED_FIELDS = new Set([
+export const MAPPED_FIELDS = new Set([
   "firstName",
   "lastName",
   "middleName",
@@ -246,7 +258,9 @@ function toApplicantProfile(row: VisaApplicantRow): ApplicantProfile {
   if (dateOfExpiry !== undefined) passport["dateOfExpiry"] = dateOfExpiry;
 
   const passportCountry =
-    typeof row.country === "string" && !isEmptyValue(row.country) ? row.country : undefined;
+    typeof row.country === "string" && !isEmptyValue(row.country)
+      ? (transformCountry(row.country) ?? row.country)
+      : undefined;
   if (passportCountry !== undefined) passport["country"] = passportCountry;
 
   if (Object.keys(passport).length > 0) profile["passport"] = passport;

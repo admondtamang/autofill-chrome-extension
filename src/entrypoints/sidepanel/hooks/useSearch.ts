@@ -52,7 +52,8 @@ export function useSearch(): UseSearchReturn {
       filters: Record<string, string>,
       append: boolean,
     ) => {
-      if (q.length < SEARCH_MIN_CHARS) {
+      // Allow empty q (list all), but block partial queries below the minimum
+      if (q.length > 0 && q.length < SEARCH_MIN_CHARS) {
         setResults([]);
         setCount(0);
         setLoading(false);

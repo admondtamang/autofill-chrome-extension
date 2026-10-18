@@ -1,17 +1,21 @@
 import * as React from "react";
 import { useEffect, useRef } from "react";
 import { Toaster } from "sonner";
+import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "./hooks/useSession";
 import { useProfile } from "./hooks/useProfile";
 import { useFill } from "./hooks/useFill";
+import { useAiSettings } from "./hooks/useAiSettings";
+import { useAiFill } from "./hooks/useAiFill";
 import { LoginScreen } from "./screens/LoginScreen";
 import { SearchScreen } from "./screens/SearchScreen";
 import { UserDataScreen } from "./screens/UserDataScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
 import type { RecordType } from "@/shared/contracts/recordType";
 import type { ApplicantProfile } from "@/shared/types/applicantProfile";
 
-type Screen = "login" | "search" | "userdata";
+type Screen = "login" | "search" | "userdata" | "settings";
 
 export function App() {
   const { session, loading: sessionLoading, login, logout } = useSession();
@@ -23,6 +27,8 @@ export function App() {
     clearClient,
   } = useProfile();
   const { fillReport, filling, fillAll, clickToFill, startDrag } = useFill();
+  const { settings: aiSettings, saveSettings: saveAiSettings } = useAiSettings();
+  const { aiFilling, aiError, aiFill } = useAiFill();
 
   const [screen, setScreen] = React.useState<Screen>("login");
   const searchFocusRef = useRef<HTMLElement | null>(null);
@@ -95,6 +101,15 @@ export function App() {
             <Button
               variant="ghost"
               size="sm"
+              className="h-7 w-7 p-0"
+              onClick={() => setScreen((s) => s === "settings" ? "search" : "settings")}
+              aria-label="AI Settings"
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               className="h-7 text-xs"
               onClick={handleLogout}
               aria-label="Log out"
@@ -128,6 +143,18 @@ export function App() {
             onClickToFill={clickToFill}
             onDragStart={startDrag}
             onChangeClient={handleChangeClient}
+            aiSettings={aiSettings}
+            aiFilling={aiFilling}
+            aiError={aiError}
+            onAiFill={aiFill}
+          />
+        )}
+
+        {screen === "settings" && (
+          <SettingsScreen
+            settings={aiSettings}
+            onSave={saveAiSettings}
+            onClose={() => setScreen(profile ? "userdata" : "search")}
           />
         )}
       </main>

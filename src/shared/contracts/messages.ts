@@ -42,6 +42,24 @@ export type EnterPickModeRequest = {
   payload: { profilePath: string; value: string };
 };
 
+// Enhanced scan result per field
+export type ScannedField = {
+  id: string;
+  name: string;
+  tag: string;
+  type: string;
+  placeholder: string;
+  label: string;
+  ariaLabel: string;
+  value: string;
+};
+
+// Fill by field ids/names
+export type FillByIdsRequest = {
+  type: "fill.byIds";
+  payload: { fields: Array<{ id?: string; name?: string; value: string }> };
+};
+
 // --- Content script → Background (drag relay) ---
 
 export type DragStartMessage = {
@@ -62,7 +80,8 @@ export type ContentScriptRequest =
   | FillAllRequest
   | ClickToFillRequest
   | ScanPageRequest
-  | EnterPickModeRequest;
+  | EnterPickModeRequest
+  | FillByIdsRequest;
 
 export type AnyMessage = BackgroundRequest | ContentScriptRequest | DragStartMessage;
 

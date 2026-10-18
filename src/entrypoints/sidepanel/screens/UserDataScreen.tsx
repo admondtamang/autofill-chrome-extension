@@ -2,11 +2,13 @@ import { useState, useMemo } from "react";
 import type { ApplicantProfile } from "@/shared/types/applicantProfile";
 import type { RecordType } from "@/shared/contracts/recordType";
 import type { FillReport } from "@/shared/contracts/fillReport";
+import type { AiSettings } from "../hooks/useAiSettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Sparkles } from "lucide-react";
 import {
   Accordion,
   AccordionItem,
@@ -39,6 +41,10 @@ type UserDataScreenProps = {
   onDragStart: (profilePath: string, value: string) => void;
   onChangeClient: () => void;
   onAutoFillChange?: (enabled: boolean) => void;
+  aiSettings: AiSettings;
+  aiFilling: boolean;
+  aiError: string | null;
+  onAiFill: (profile: ApplicantProfile, settings: AiSettings) => Promise<FillReport | null>;
 };
 
 function isNonEmpty(value: string | undefined | null): boolean {
@@ -56,6 +62,10 @@ export function UserDataScreen({
   onDragStart,
   onChangeClient,
   onAutoFillChange,
+  aiSettings,
+  aiFilling,
+  aiError,
+  onAiFill,
 }: UserDataScreenProps) {
   const [overwrite, setOverwrite] = useState(false);
   const [autoFill, setAutoFill] = useState(false);
@@ -351,6 +361,19 @@ export function UserDataScreen({
             {filling ? "Filling…" : "Fill all"}
           </Button>
 
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void onAiFill(profile, aiSettings)}
+            disabled={aiFilling || filling}
+            aria-busy={aiFilling}
+            aria-label="Fill form using AI"
+            className="gap-1.5"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {aiFilling ? "AI filling…" : "AI Fill"}
+          </Button>
+
           <div className="flex items-center gap-1.5">
             <Switch
               id="overwrite-switch"
@@ -380,6 +403,11 @@ export function UserDataScreen({
             </Label>
           </div>
         </div>
+
+        {/* AI error */}
+        {aiError && (
+          <p className="text-xs text-destructive" role="alert">{aiError}</p>
+        )}
 
         {/* In-panel filter */}
         <div className="flex items-center gap-2">

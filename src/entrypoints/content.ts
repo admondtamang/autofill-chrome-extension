@@ -1,4 +1,4 @@
-import type { ContentScriptRequest, DragStartMessage } from "@/shared/contracts/messages";
+import type { ContentScriptRequest, DragStartMessage, ScannedField } from "@/shared/contracts/messages";
 import type { FillReport } from "@/shared/contracts/fillReport";
 import type { ControlType } from "@/shared/contracts/fieldMap";
 import { emptyFillReport } from "@/shared/contracts/fillReport";
@@ -40,31 +40,39 @@ function syntheticFallback() {
   );
 }
 
-function collectFormControls(): Array<{
-  tag: string;
-  name: string;
-  id: string;
-  type: string;
-  value: string;
-}> {
+function collectFormControls(): ScannedField[] {
   const controls = document.querySelectorAll<HTMLElement>(
-    "input, select, textarea"
+    "input:not([type=hidden]), select, textarea"
   );
-  return Array.from(controls).map((el) => ({
-    tag: el.tagName.toLowerCase(),
-    name: (el as HTMLInputElement).name ?? "",
-    id: el.id ?? "",
-    type:
-      el instanceof HTMLInputElement
-        ? el.type
-        : el.tagName.toLowerCase(),
-    value:
-      el instanceof HTMLInputElement ||
-      el instanceof HTMLSelectElement ||
-      el instanceof HTMLTextAreaElement
-        ? el.value
-        : "",
-  }));
+  return Array.from(controls).map((el) => {
+    const id = el.id ?? "";
+    const name = (el as HTMLInputElement).name ?? "";
+    // Find associated label
+    let label = "";
+    if (id) {
+      const labelEl = document.querySelector<HTMLLabelElement>(`label[for="${id}"]`);
+      if (labelEl) label = labelEl.textContent?.trim() ?? "";
+    }
+    if (!label) {
+      const parentLabel = el.closest("label");
+      if (parentLabel) label = parentLabel.textContent?.trim() ?? "";
+    }
+    return {
+      id,
+      name,
+      tag: el.tagName.toLowerCase(),
+      type: el instanceof HTMLInputElement ? el.type : el.tagName.toLowerCase(),
+      placeholder: (el as HTMLInputElement).placeholder ?? "",
+      label,
+      ariaLabel: el.getAttribute("aria-label") ?? "",
+      value:
+        el instanceof HTMLInputElement ||
+        el instanceof HTMLSelectElement ||
+        el instanceof HTMLTextAreaElement
+          ? el.value
+          : "",
+    };
+  });
 }
 
 // ─── Pick mode ────────────────────────────────────────────────────────────────
@@ -242,6 +250,30 @@ export default defineContentScript({
               const { profilePath, value } = msg.payload;
               enterPickMode(profilePath, value, "text");
               sendResponse({ ok: true, data: emptyFillReport() });
+              break;
+            }
+
+            case "fill.byIds": {
+              const { fields } = msg.payload;
+              const filled: string[] = [];
+              const failed: Array<{ field: string; reason: string }> = [];
+              for (const f of fields) {
+                let el: HTMLElement | null = null;
+                if (f.id) el = document.getElementById(f.id);
+                if (!el && f.name) el = document.querySelector<HTMLElement>(`[name="${f.name}"]`);
+                if (el) {
+                  const ok = setValue(el, f.value, "text");
+                  if (ok) {
+                    highlightFilled(el);
+                    filled.push(f.id ?? f.name ?? "");
+                  } else {
+                    failed.push({ field: f.id ?? f.name ?? "", reason: "setValue returned false" });
+                  }
+                } else {
+                  failed.push({ field: f.id ?? f.name ?? "", reason: "element not found" });
+                }
+              }
+              sendResponse({ ok: true, data: { filled, skipped: [], notFound: [], failed } satisfies FillReport });
               break;
             }
 

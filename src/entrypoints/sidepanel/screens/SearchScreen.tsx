@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { RecordType } from "@/shared/contracts/recordType";
 import { FILTER_CONFIG } from "@/shared/contracts/filterConfig";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { RecordTypeTabs } from "@/components/RecordTypeTabs";
 import { SearchResult } from "@/components/SearchResult";
 import { FilterBar } from "@/components/FilterBar";
 import { useSearch } from "../hooks/useSearch";
+import { RECORD_REGISTRY } from "@/records/registry";
 import type { ApplicantProfile } from "@/shared/types/applicantProfile";
 
 type RawRow = {
@@ -29,18 +30,16 @@ type SearchScreenProps = {
   focusRef?: React.MutableRefObject<HTMLElement | null>;
 };
 
-function defaultTransform(_row: unknown): ApplicantProfile {
-  // Minimal transform — the Data Engineer will provide the real registry
-  const row = _row as RawRow;
-  return {
-    personal: {
-      familyName: row.lastName,
-      givenNames: row.firstName,
-    },
-    contact: {
-      email: row.email,
-      mobile: row.mobile ?? row.phone,
-    },
+function getTransform(recordType: RecordType): (row: unknown) => ApplicantProfile {
+  const def = RECORD_REGISTRY.get(recordType);
+  if (def) return def.toApplicantProfile as (row: unknown) => ApplicantProfile;
+  // Fallback: minimal transform
+  return (row: unknown) => {
+    const r = row as RawRow;
+    return {
+      personal: { familyName: r.lastName, givenNames: r.firstName },
+      contact: { email: r.email, mobile: r.mobile ?? r.phone },
+    };
   };
 }
 
@@ -54,6 +53,12 @@ export function SearchScreen({ onSelectClient, focusRef }: SearchScreenProps) {
 
   const { results, count, loading, error, hasMore, search, loadMore } =
     useSearch();
+
+  // Load all records on mount
+  useEffect(() => {
+    search(recordType, "", 1, {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Wire external focus ref to the search input
   React.useEffect(() => {
@@ -105,7 +110,7 @@ export function SearchScreen({ onSelectClient, focusRef }: SearchScreenProps) {
 
   const handleResultClick = useCallback(
     (row: RawRow) => {
-      onSelectClient(recordType, row.id, defaultTransform);
+      onSelectClient(recordType, row.id, getTransform(recordType));
     },
     [recordType, onSelectClient],
   );
@@ -151,16 +156,9 @@ export function SearchScreen({ onSelectClient, focusRef }: SearchScreenProps) {
         )}
 
         {/* Empty state */}
-        {!loading && !error && q.length >= 2 && results.length === 0 && (
+        {!loading && !error && results.length === 0 && (
           <p role="status" className="p-3 text-sm text-muted-foreground text-center">
-            No results found.
-          </p>
-        )}
-
-        {/* Prompt state */}
-        {!loading && q.length < 2 && (
-          <p className="p-3 text-sm text-muted-foreground text-center">
-            Type at least 2 characters to search.
+            {q.length > 0 ? "No results found." : "No records available."}
           </p>
         )}
 
