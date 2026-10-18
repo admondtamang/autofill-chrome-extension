@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Passport Details – Synthetic Fixture</title>
+</head>
+<body>
+  <form id="passportDetailsForm" novalidate>
+    <h1>Passport Details</h1>
+
+    <!-- label[for] + input pattern -->
+    <div class="form-group">
+      <label for="passportNumber">Passport number</label>
+      <input type="text" id="passportNumber" name="passportNumber" autocomplete="off" />
+    </div>
+
+    <!-- Date of issue – date input -->
+    <div class="form-group">
+      <label for="dateOfIssue">Date of issue</label>
+      <input type="date" id="dateOfIssue" name="dateOfIssue" />
+    </div>
+
+    <!-- Date of expiry – date input -->
+    <div class="form-group">
+      <label for="dateOfExpiry">Date of expiry</label>
+      <input type="date" id="dateOfExpiry" name="dateOfExpiry" />
+    </div>
+
+    <!-- Country of passport – select -->
+    <div class="form-group">
+      <label for="countryOfPassport">Country of passport</label>
+      <select id="countryOfPassport" name="countryOfPassport">
+        <option value="">-- Select --</option>
+        <option value="Australia">Australia</option>
+        <option value="China">China</option>
+        <option value="India">India</option>
+        <option value="Nepal">Nepal</option>
+        <option value="Philippines">Philippines</option>
+        <option value="United Kingdom">United Kingdom</option>
+        <option value="United States of America">United States of America</option>
+        <option value="Vietnam">Vietnam</option>
+        <option value="Korea, Republic of">Korea, Republic of</option>
+        <option value="Japan">Japan</option>
+        <option value="Pakistan">Pakistan</option>
+        <option value="Sri Lanka">Sri Lanka</option>
+        <option value="Bangladesh">Bangladesh</option>
+        <option value="Thailand">Thailand</option>
+        <option value="New Zealand">New Zealand</option>
+      </select>
+    </div>
+
+    <!-- Wrapping label pattern for another field -->
+    <div class="form-group">
+      <label>
+        Place of issue
+        <input type="text" name="placeOfIssue" />
+      </label>
+    </div>
+
+    <!-- Has other passports – radio group -->
+    <fieldset>
+      <legend>Do you hold or have you held any other passports?</legend>
+      <label>
+        <input type="radio" name="otherPassports" value="Yes" /> Yes
+      </label>
+      <label>
+        <input type="radio" name="otherPassports" value="No" /> No
+      </label>
+    </fieldset>
+
+    <!-- Conditional section (shown when otherPassports = Yes) -->
+    <div id="otherPassportSection" style="display:none;">
+      <div class="form-group">
+        <label for="otherPassportNumber">Other passport number</label>
+        <input type="text" id="otherPassportNumber" name="otherPassportNumber" />
+      </div>
+      <div class="form-group">
+        <label for="otherPassportCountry">Country of other passport</label>
+        <select id="otherPassportCountry" name="otherPassportCountry">
+          <option value="">-- Select --</option>
+          <option value="Australia">Australia</option>
+          <option value="United Kingdom">United Kingdom</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- aria-label pattern -->
+    <div class="form-group">
+      <input type="text" aria-label="Passport name" name="passportName" autocomplete="name" />
+    </div>
+
+    <!-- Table-based layout -->
+    <table>
+      <tbody>
+        <tr>
+          <td><label for="passportSurname">Surname on passport</label></td>
+          <td><input type="text" id="passportSurname" name="passportSurname" /></td>
+        </tr>
+        <tr>
+          <td><label for="passportGivenNames">Given names on passport</label></td>
+          <td><input type="text" id="passportGivenNames" name="passportGivenNames" /></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button type="submit">Save and continue</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Applicant Details – Synthetic Fixture</title>
+</head>
+<body>
+  <form id="applicantDetailsForm" novalidate>
+    <h1>Applicant Details</h1>
+
+    <!-- label[for] + input pattern -->
+    <div class="form-group">
+      <label for="familyName">Family name</label>
+      <input type="text" id="familyName" name="familyName" autocomplete="family-name" />
+    </div>
+
+    <!-- wrapping label pattern -->
+    <div class="form-group">
+      <label>
+        Given names
+        <input type="text" name="givenNames" autocomplete="given-name" />
+      </label>
+    </div>
+
+    <!-- Date of birth: split day/month/year -->
+    <fieldset>
+      <legend>Date of birth</legend>
+      <div class="date-group">
+        <label for="dobDay">Day</label>
+        <input type="number" id="dobDay" name="dobDay" min="1" max="31" />
+        <label for="dobMonth">Month</label>
+        <select id="dobMonth" name="dobMonth">
+          <option value="">-- Select --</option>
+          <option value="01">January</option>
+          <option value="02">February</option>
+          <option value="03">March</option>
+          <option value="04">April</option>
+          <option value="05">May</option>
+          <option value="06">June</option>
+          <option value="07">July</option>
+          <option value="08">August</option>
+          <option value="09">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+        <label for="dobYear">Year</label>
+        <input type="number" id="dobYear" name="dobYear" min="1900" max="2099" />
+      </div>
+    </fieldset>
+
+    <!-- Gender – radio group -->
+    <fieldset>
+      <legend>Sex</legend>
+      <label>
+        <input type="radio" name="sex" value="Male" /> Male
+      </label>
+      <label>
+        <input type="radio" name="sex" value="Female" /> Female
+      </label>
+      <label>
+        <input type="radio" name="sex" value="X" /> Indeterminate / Intersex / Unspecified
+      </label>
+    </fieldset>
+
+    <!-- Date of birth as a single date input (alternate form) -->
+    <div class="form-group">
+      <label for="dateOfBirth">Date of birth</label>
+      <input type="date" id="dateOfBirth" name="dateOfBirth" />
+    </div>
+
+    <!-- Country of birth – select -->
+    <div class="form-group">
+      <label for="countryOfBirth">Country of birth</label>
+      <select id="countryOfBirth" name="countryOfBirth">
+        <option value="">-- Select --</option>
+        <option value="Australia">Australia</option>
+        <option value="China">China</option>
+        <option value="India">India</option>
+        <option value="Nepal">Nepal</option>
+        <option value="Philippines">Philippines</option>
+        <option value="United Kingdom">United Kingdom</option>
+        <option value="United States of America">United States of America</option>
+        <option value="Vietnam">Vietnam</option>
+      </select>
+    </div>
+
+    <!-- aria-label example -->
+    <div class="form-group">
+      <input type="text" aria-label="Middle name" name="middleName" />
+    </div>
+
+    <!-- Table-based layout (some ImmiAccount pages use this) -->
+    <table>
+      <tbody>
+        <tr>
+          <td><label for="placeOfBirth">Place of birth</label></td>
+          <td><input type="text" id="placeOfBirth" name="placeOfBirth" /></td>
+        </tr>
+        <tr>
+          <td><label for="nationality">Nationality</label></td>
+          <td>
+            <select id="nationality" name="nationality">
+              <option value="">-- Select --</option>
+              <option value="Australian">Australian</option>
+              <option value="Indian">Indian</option>
+              <option value="Nepalese">Nepalese</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button type="submit">Save and continue</button>
+  </form>
+</body>
+</html>

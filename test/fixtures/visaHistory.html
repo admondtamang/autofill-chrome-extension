@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Visa History – Synthetic Fixture</title>
+</head>
+<body>
+  <form id="visaHistoryForm" novalidate>
+    <h1>Visa History</h1>
+
+    <!-- Is applicant currently in Australia – radio Yes/No -->
+    <fieldset>
+      <legend>Is the applicant currently in Australia?</legend>
+      <label>
+        <input type="radio" name="inAustralia" value="Yes" /> Yes
+      </label>
+      <label>
+        <input type="radio" name="inAustralia" value="No" /> No
+      </label>
+    </fieldset>
+
+    <!-- Conditional section (shown when inAustralia = Yes) -->
+    <div id="currentVisaSection">
+      <!-- Current visa – label[for] + input -->
+      <div class="form-group">
+        <label for="currentVisa">Current visa</label>
+        <input type="text" id="currentVisa" name="currentVisa" />
+      </div>
+
+      <!-- Current visa expiry – date input -->
+      <div class="form-group">
+        <label for="currentVisaExpiry">Current visa expiry</label>
+        <input type="date" id="currentVisaExpiry" name="currentVisaExpiry" />
+      </div>
+
+      <!-- Visa subclass – select -->
+      <div class="form-group">
+        <label for="visaSubclass">Visa subclass</label>
+        <select id="visaSubclass" name="visaSubclass">
+          <option value="">-- Select --</option>
+          <option value="500">500 - Student</option>
+          <option value="482">482 - Temporary Skill Shortage</option>
+          <option value="186">186 - Employer Nomination Scheme</option>
+          <option value="189">189 - Skilled Independent</option>
+          <option value="190">190 - Skilled Nominated</option>
+          <option value="491">491 - Skilled Work Regional</option>
+          <option value="600">600 - Visitor</option>
+          <option value="485">485 - Temporary Graduate</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Last entry date – date input -->
+    <div class="form-group">
+      <label for="lastEntryDate">Last entry date</label>
+      <input type="date" id="lastEntryDate" name="lastEntryDate" />
+    </div>
+
+    <!-- Proposed visa – wrapping label pattern -->
+    <div class="form-group">
+      <label>
+        Proposed visa
+        <input type="text" name="proposedVisa" />
+      </label>
+    </div>
+
+    <!-- Has previously applied – radio group -->
+    <fieldset>
+      <legend>Have you previously applied for an Australian visa?</legend>
+      <label>
+        <input type="radio" name="previouslyApplied" value="Yes" /> Yes
+      </label>
+      <label>
+        <input type="radio" name="previouslyApplied" value="No" /> No
+      </label>
+    </fieldset>
+
+    <!-- Previous refusal – conditional -->
+    <div id="previousVisaSection" style="display:none;">
+      <fieldset>
+        <legend>Was any previous visa application refused?</legend>
+        <label>
+          <input type="radio" name="previousRefusal" value="Yes" /> Yes
+        </label>
+        <label>
+          <input type="radio" name="previousRefusal" value="No" /> No
+        </label>
+      </fieldset>
+    </div>
+
+    <!-- aria-label example -->
+    <div class="form-group">
+      <input type="text" aria-label="Bridge visa number" name="bridgeVisa" />
+    </div>
+
+    <!-- Table-based layout -->
+    <table>
+      <tbody>
+        <tr>
+          <td><label for="immigrationStatus">Immigration status</label></td>
+          <td>
+            <select id="immigrationStatus" name="immigrationStatus">
+              <option value="">-- Select --</option>
+              <option value="Lawful">Lawful</option>
+              <option value="Unlawful">Unlawful</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button type="submit">Save and continue</button>
+  </form>
+</body>
+</html>

@@ -1,0 +1,53 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`fillAll – applicantDetails.html > snapshot – FillReport shape 1`] = `
+{
+  "failed": [],
+  "filled": [
+    "personal.familyName",
+    "personal.givenNames",
+    "personal.dateOfBirth",
+  ],
+  "notFound": [],
+  "skipped": [],
+}
+`;
+
+exports[`fillAll – contactDetails.html > snapshot – FillReport shape 1`] = `
+{
+  "failed": [],
+  "filled": [
+    "contact.email",
+    "contact.mobile",
+  ],
+  "notFound": [],
+  "skipped": [],
+}
+`;
+
+exports[`fillAll – passportDetails.html > snapshot – FillReport shape 1`] = `
+{
+  "failed": [],
+  "filled": [
+    "passport.number",
+    "passport.dateOfIssue",
+    "passport.dateOfExpiry",
+    "passport.country",
+  ],
+  "notFound": [],
+  "skipped": [],
+}
+`;
+
+exports[`fillAll – visaHistory.html > snapshot – FillReport shape 1`] = `
+{
+  "failed": [],
+  "filled": [
+    "visa.inAustralia",
+    "visa.currentVisa",
+    "visa.currentVisaExpiry",
+  ],
+  "notFound": [],
+  "skipped": [],
+}
+`;

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Contact Details – Synthetic Fixture</title>
+</head>
+<body>
+  <form id="contactDetailsForm" novalidate>
+    <h1>Contact Details</h1>
+
+    <!-- Email address – label[for] + input -->
+    <div class="form-group">
+      <label for="emailAddress">Email address</label>
+      <input type="email" id="emailAddress" name="emailAddress" autocomplete="email" />
+    </div>
+
+    <!-- Confirm email – wrapping label pattern -->
+    <div class="form-group">
+      <label>
+        Confirm email address
+        <input type="email" name="confirmEmail" autocomplete="email" />
+      </label>
+    </div>
+
+    <!-- Mobile/cell phone – label[for] + input -->
+    <div class="form-group">
+      <label for="mobilePhone">Mobile/cell phone</label>
+      <input type="tel" id="mobilePhone" name="mobilePhone" autocomplete="tel" />
+    </div>
+
+    <!-- Home phone – wrapping label -->
+    <div class="form-group">
+      <label>
+        Home phone
+        <input type="tel" name="homePhone" autocomplete="tel-national" />
+      </label>
+    </div>
+
+    <!-- Preferred contact method – radio group -->
+    <fieldset>
+      <legend>Preferred contact method</legend>
+      <label>
+        <input type="radio" name="preferredContact" value="Email" /> Email
+      </label>
+      <label>
+        <input type="radio" name="preferredContact" value="Phone" /> Phone
+      </label>
+      <label>
+        <input type="radio" name="preferredContact" value="SMS" /> SMS
+      </label>
+    </fieldset>
+
+    <!-- Mailing address – textarea -->
+    <div class="form-group">
+      <label for="mailingAddress">Mailing address</label>
+      <textarea id="mailingAddress" name="mailingAddress" rows="3"></textarea>
+    </div>
+
+    <!-- State – select -->
+    <div class="form-group">
+      <label for="state">State / Territory</label>
+      <select id="state" name="state">
+        <option value="">-- Select --</option>
+        <option value="NSW">New South Wales</option>
+        <option value="VIC">Victoria</option>
+        <option value="QLD">Queensland</option>
+        <option value="WA">Western Australia</option>
+        <option value="SA">South Australia</option>
+        <option value="TAS">Tasmania</option>
+        <option value="ACT">Australian Capital Territory</option>
+        <option value="NT">Northern Territory</option>
+      </select>
+    </div>
+
+    <!-- Country – select -->
+    <div class="form-group">
+      <label for="country">Country</label>
+      <select id="country" name="country">
+        <option value="">-- Select --</option>
+        <option value="Australia">Australia</option>
+        <option value="India">India</option>
+        <option value="Nepal">Nepal</option>
+        <option value="Philippines">Philippines</option>
+        <option value="United Kingdom">United Kingdom</option>
+      </select>
+    </div>
+
+    <!-- aria-label example -->
+    <div class="form-group">
+      <input type="text" aria-label="Postcode" name="postcode" autocomplete="postal-code" />
+    </div>
+
+    <!-- Table-based layout -->
+    <table>
+      <tbody>
+        <tr>
+          <td><label for="workPhone">Work phone</label></td>
+          <td><input type="tel" id="workPhone" name="workPhone" /></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Newsletter subscription – checkbox -->
+    <div class="form-group">
+      <label>
+        <input type="checkbox" name="newsletter" value="true" /> Subscribe to newsletter
+      </label>
+    </div>
+
+    <button type="submit">Save and continue</button>
+  </form>
+</body>
+</html>

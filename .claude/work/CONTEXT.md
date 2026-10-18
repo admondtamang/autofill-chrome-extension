@@ -1,9 +1,5 @@
-# ImmiFill – Recon Digest
-Generated: 2026-10-18
-Sources: docs/api/auth.md, docs/api/records.md, docs/api/samples/visa-applicant.json,
-         docs/field-map.md, docs/immi-pages/README.md, BUILD_PROMPT.md
-
----
+# ImmiFill – Recon Digest  (2026-10-18)
+<!-- Sources: docs/api/{auth,records}.md, docs/api/samples/visa-applicant.json, docs/field-map.md, docs/immi-pages/README.md, BUILD_PROMPT.md -->
 
 ## 1. API – Confirmed Facts
 
@@ -164,46 +160,34 @@ files: Array<{ url: string, name: string, size: number, addedDate: string }> | n
 
 ## 4. CRM Field → ApplicantProfile Mapping
 
-| CRM Field(s)              | ApplicantProfile Path         | Expected ImmiAccount Label                              | Transform      |
-|---------------------------|-------------------------------|---------------------------------------------------------|----------------|
-| `lastName`                | personal.familyName           | Family name                                             | trim           |
-| `firstName` + `middleName`| personal.givenNames           | Given names                                             | join non-empty with single space |
-| `dob`                     | personal.dateOfBirth          | Date of birth                                           | date rule      |
-| `passport`                | passport.number               | Passport number                                         | trim, uppercase |
-| `issueDate`               | passport.dateOfIssue          | Date of issue                                           | date rule      |
-| `expiryDate`              | passport.dateOfExpiry         | Date of expiry                                          | date rule      |
-| `country`                 | passport.country (ASSUMPTION) | Country of passport / Nationality of passport holder    | country rule   |
-| `email`                   | contact.email                 | Email address                                           | trim, lowercase |
-| `phone`                   | contact.mobile                | Mobile / cell phone                                     | phone rule     |
-| `location`                | visa.inAustralia              | Is the applicant currently in Australia?                | Onshore→Yes, Offshore→No, else skip |
-| `currentVisa`             | visa.currentVisa              | Current visa (if present)                               | none           |
-| `visaExpiry`              | visa.currentVisaExpiry        | Visa expiry date (if present)                           | date rule      |
-| `proposedVisa`            | visa.proposed                 | (display only)                                          | none           |
-| `visaStream`              | visa.stream                   | (display only)                                          | none           |
-| `visaSubmitted`           | visa.submitted                | (display only)                                          | date rule      |
-| `visaGranted`             | visa.granted                  | (display only)                                          | date rule      |
-| `occupation`              | employment.nominatedOccupation| Nominated occupation                                    | none           |
-| `anzsco`                  | employment.anzscoCode         | ANZSCO code (if present)                                | digits only    |
-| `sponsorName`             | sponsor.name                  | Sponsor name (if present)                               | none           |
-| `sponsorEmail`            | sponsor.email                 | Sponsor email (if present)                              | none           |
-| `sponsorPhone`            | sponsor.phone                 | Sponsor phone (if present)                              | phone rule     |
-| `nominationLodged`        | nomination.lodged             | (display only)                                          | date rule      |
-| `nominationDecision`      | nomination.decision           | (display only)                                          | date rule      |
-| `nominationStatus`        | nomination.status             | (display only)                                          | none           |
-| `sbsStatus`               | skillsAssessment.status       | (display only)                                          | none           |
-| `sbsSubmissionDate`       | skillsAssessment.submitted    | (display only)                                          | date rule      |
-| `sbsDecisionDate`         | skillsAssessment.decision     | (display only)                                          | date rule      |
-| `state`                   | address.state                 | State or province                                       | AU state rule  |
-| `status`                  | crm.status                    | (display only)                                          | none           |
-| `csaStatus`               | crm.csaStatus                 | (display only)                                          | none           |
-| `assignedDate`            | crm.assignedDate              | (display only)                                          | date rule      |
-| `requestedDate`           | crm.requestedDate             | (display only)                                          | date rule      |
-| `dueDate`                 | crm.dueDate                   | (display only)                                          | date rule      |
-| `remarks`                 | notes.remarks                 | (display/copy only)                                     | strip HTML     |
-| `visaNote`                | notes.visaNote                | (display/copy only)                                     | strip HTML     |
-| `miscNote`                | notes.miscNote                | (display/copy only)                                     | strip HTML     |
-| `files`                   | files[]                       | (links only, not fillable)                              | none           |
-| everything else visible   | extras[]                      | shown by section, draggable, click-to-fill              | none           |
+Labels marked * are EXPECTED only — not verified against real fixtures (none exist).
+
+| CRM Field(s)                    | ApplicantProfile Path           | ImmiAccount Label *                        | Transform           |
+|---------------------------------|---------------------------------|--------------------------------------------|---------------------|
+| `lastName`                      | personal.familyName             | Family name                                | trim                |
+| `firstName` + `middleName`      | personal.givenNames             | Given names                                | join non-empty / space |
+| `dob`                           | personal.dateOfBirth            | Date of birth                              | date rule           |
+| `passport`                      | passport.number                 | Passport number                            | trim, uppercase     |
+| `issueDate`                     | passport.dateOfIssue            | Date of issue                              | date rule           |
+| `expiryDate`                    | passport.dateOfExpiry           | Date of expiry                             | date rule           |
+| `country` (ASSUMPTION: passport)| passport.country                | Country of passport                        | country rule        |
+| `email`                         | contact.email                   | Email address                              | trim, lowercase     |
+| `phone`                         | contact.mobile                  | Mobile / cell phone                        | phone rule          |
+| `location`                      | visa.inAustralia                | In Australia?                              | Onshore→Yes, Offshore→No, else skip |
+| `currentVisa`                   | visa.currentVisa                | Current visa (if present)                  | none                |
+| `visaExpiry`                    | visa.currentVisaExpiry          | Visa expiry date (if present)              | date rule           |
+| `proposedVisa`, `visaStream`    | visa.proposed, visa.stream      | display only                               | none                |
+| `visaSubmitted`, `visaGranted`  | visa.submitted, visa.granted    | display only                               | date rule           |
+| `occupation`                    | employment.nominatedOccupation  | Nominated occupation                       | none                |
+| `anzsco`                        | employment.anzscoCode           | ANZSCO code (if present)                   | digits only         |
+| `sponsorName/Email/Phone`       | sponsor.name/email/phone        | Sponsor details (if present)               | phone rule for phone|
+| `nominationLodged/Decision/Status` | nomination.lodged/decision/status | display only                           | date rule / none    |
+| `sbsStatus/SubmissionDate/DecisionDate` | skillsAssessment.*      | display only                               | date rule / none    |
+| `state`                         | address.state                   | State or province                          | AU state rule       |
+| `status`, `csaStatus`, `assignedDate`, `requestedDate`, `dueDate` | crm.* | display only      | date rule / none    |
+| `remarks`, `visaNote`, `miscNote` | notes.*                       | display/copy only, never Fill all          | strip HTML          |
+| `files`                         | files[]                         | links only, not fillable or draggable      | none                |
+| all other visible fields        | extras[]                        | shown by section, draggable, click-to-fill | none                |
 
 ---
 
