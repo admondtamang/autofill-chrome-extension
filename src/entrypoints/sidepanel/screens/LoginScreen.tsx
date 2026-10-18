@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,30 @@ type LoginScreenProps = {
   onSuccess: () => void;
 };
 
+// Dev credentials — remove before production
+const DEV_EMAIL = "ukiras@gmail.com";
+const DEV_PASSWORD = "111111";
+
 export function LoginScreen({ login, onSuccess }: LoginScreenProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(DEV_EMAIL);
+  const [password, setPassword] = useState(DEV_PASSWORD);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Auto-login with dev credentials on mount
+  useEffect(() => {
+    void (async () => {
+      setLoading(true);
+      try {
+        await login(DEV_EMAIL, DEV_PASSWORD);
+        onSuccess();
+      } catch {
+        // If auto-login fails, let the user try manually
+        setLoading(false);
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

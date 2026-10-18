@@ -27,8 +27,17 @@ export function App() {
     clearClient,
   } = useProfile();
   const { fillReport, filling, fillAll, clickToFill, startDrag } = useFill();
-  const { settings: aiSettings, saveSettings: saveAiSettings } = useAiSettings();
-  const { aiFilling, aiError, aiFill } = useAiFill();
+  const { settings: aiSettings, saveSettings: saveAiSettings, usage: aiUsage, incrementUsage } = useAiSettings();
+  const { aiFilling, aiError, aiFill: aiFillBase } = useAiFill();
+
+  const aiFill: typeof aiFillBase = React.useCallback(
+    async (profile, settings) => {
+      const report = await aiFillBase(profile, settings);
+      if (report) incrementUsage();
+      return report;
+    },
+    [aiFillBase, incrementUsage],
+  );
 
   const [screen, setScreen] = React.useState<Screen>("login");
   const searchFocusRef = useRef<HTMLElement | null>(null);
@@ -153,6 +162,7 @@ export function App() {
         {screen === "settings" && (
           <SettingsScreen
             settings={aiSettings}
+            usage={aiUsage}
             onSave={saveAiSettings}
             onClose={() => setScreen(profile ? "userdata" : "search")}
           />

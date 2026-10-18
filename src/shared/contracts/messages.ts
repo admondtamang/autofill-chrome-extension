@@ -52,12 +52,14 @@ export type ScannedField = {
   label: string;
   ariaLabel: string;
   value: string;
+  /** For radio/checkbox groups: list of available options */
+  options?: Array<{ value: string; label: string }>;
 };
 
 // Fill by field ids/names
 export type FillByIdsRequest = {
   type: "fill.byIds";
-  payload: { fields: Array<{ id?: string; name?: string; value: string }> };
+  payload: { fields: Array<{ id?: string; name?: string; value: string; type?: string }> };
 };
 
 // --- Content script → Background (drag relay) ---

@@ -1,9 +1,10 @@
 import type { SessionData } from "@/shared/contracts/messages";
 
-const SESSION_KEY = "session";
+const SESSION_KEY = "immifill_session";
 
 export async function getSession(): Promise<SessionData | null> {
-  const result = await chrome.storage.session.get(SESSION_KEY);
+  // Use chrome.storage.local so the token survives browser restarts
+  const result = await chrome.storage.local.get(SESSION_KEY);
   const raw: unknown = result[SESSION_KEY];
 
   if (raw === undefined || raw === null) {
@@ -22,9 +23,9 @@ export async function getSession(): Promise<SessionData | null> {
 }
 
 export async function saveSession(data: SessionData): Promise<void> {
-  await chrome.storage.session.set({ [SESSION_KEY]: data });
+  await chrome.storage.local.set({ [SESSION_KEY]: data });
 }
 
 export async function clearSession(): Promise<void> {
-  await chrome.storage.session.remove(SESSION_KEY);
+  await chrome.storage.local.remove(SESSION_KEY);
 }

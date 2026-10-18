@@ -72,6 +72,8 @@ export function UserDataScreen({
   const [showEmpty, setShowEmpty] = useState(false);
   const [filterQ, setFilterQ] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
+  const [aiReport, setAiReport] = useState<FillReport | null>(null);
+  const [aiReportOpen, setAiReportOpen] = useState(false);
 
   const clientName = [
     profile.personal?.givenNames,
@@ -364,7 +366,11 @@ export function UserDataScreen({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => void onAiFill(profile, aiSettings)}
+            onClick={() => {
+              void onAiFill(profile, aiSettings).then((report) => {
+                if (report) { setAiReport(report); setAiReportOpen(true); }
+              });
+            }}
             disabled={aiFilling || filling}
             aria-busy={aiFilling}
             aria-label="Fill form using AI"
@@ -568,7 +574,7 @@ export function UserDataScreen({
         </Accordion>
       </div>
 
-      {/* Fill report sheet */}
+      {/* Fill report sheet (Fill all) */}
       {fillReport && (
         <FillReportSheet
           fillReport={fillReport}
@@ -577,20 +583,43 @@ export function UserDataScreen({
         />
       )}
 
-      {/* Open report button if there's a report and sheet is closed */}
-      {fillReport && !reportOpen && (
-        <div className="p-2 border-t">
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full text-xs"
-            onClick={() => setReportOpen(true)}
-            aria-label="View fill report"
-          >
-            View fill report ({fillReport.filled.length} filled)
-          </Button>
-        </div>
+      {/* AI fill report sheet */}
+      {aiReport && (
+        <FillReportSheet
+          fillReport={aiReport}
+          open={aiReportOpen}
+          onOpenChange={setAiReportOpen}
+        />
       )}
+
+      {/* Open report button if there's a report and sheet is closed */}
+      {(fillReport && !reportOpen) || (aiReport && !aiReportOpen) ? (
+        <div className="p-2 border-t flex gap-2">
+          {fillReport && !reportOpen && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs"
+              onClick={() => setReportOpen(true)}
+              aria-label="View fill report"
+            >
+              Fill report ({fillReport.filled.length} filled)
+            </Button>
+          )}
+          {aiReport && !aiReportOpen && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 text-xs gap-1"
+              onClick={() => setAiReportOpen(true)}
+              aria-label="View AI fill report"
+            >
+              <Sparkles className="h-3 w-3" />
+              AI report ({aiReport.filled.length} filled)
+            </Button>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -47,12 +47,34 @@ export function useAiFill(): UseAiFillReturn {
           messages: [{ role: "user", content: prompt }],
         }),
       });
-      if (!res.ok) throw new Error(`Claude API error: ${res.status}`);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Claude API error ${res.status}: ${body || res.statusText}`);
+      }
       const data = await res.json() as { content: Array<{ text: string }> };
       return parseAiResponse(data.content[0]?.text ?? "{}");
     }
 
-    // OpenAI or OpenRouter (same API shape)
+    if (settings.provider === "gemini") {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${settings.model}:generateContent?key=${settings.apiKey}`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Gemini API error ${res.status}: ${body || res.statusText}`);
+      }
+      const data = await res.json() as {
+        candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+      };
+      return parseAiResponse(data.candidates[0]?.content.parts[0]?.text ?? "{}");
+    }
+
+    // OpenAI or OpenRouter (same OpenAI-compatible shape)
     const baseUrl = settings.provider === "openrouter"
       ? "https://openrouter.ai/api/v1/chat/completions"
       : "https://api.openai.com/v1/chat/completions";
@@ -104,7 +126,7 @@ export function useAiFill(): UseAiFillReturn {
           const byName = fields.find((f) => f.name === key);
           const field = byId ?? byName;
           return field
-            ? { id: field.id || undefined, name: field.name || undefined, value: String(value) }
+            ? { id: field.id || undefined, name: field.name || undefined, value: String(value), type: field.type }
             : { name: key, value: String(value) };
         });
 
@@ -134,19 +156,29 @@ export function useAiFill(): UseAiFillReturn {
 }
 
 function buildPrompt(fields: ScannedField[], profile: ApplicantProfile): string {
-  const fieldList = fields.map((f) => ({
-    id: f.id,
-    name: f.name,
-    type: f.type,
-    placeholder: f.placeholder,
-    label: f.label || f.ariaLabel,
-  }));
+  const fieldList = fields.map((f) => {
+    const entry: Record<string, unknown> = {
+      id: f.id,
+      name: f.name,
+      type: f.type,
+      placeholder: f.placeholder,
+      label: f.label || f.ariaLabel,
+    };
+    if (f.options && f.options.length > 0) {
+      entry.options = f.options; // include available choices for radio/select
+    }
+    return entry;
+  });
 
   return `You are helping fill an immigration form automatically.
 
 Below are the form fields detected on the current page, and the applicant's profile data.
 
-Your task: Return a JSON object mapping each field identifier to the correct value from the profile. Only include fields you are confident about. Use the field "id" as the key if non-empty, otherwise use "name". Skip fields where the profile has no relevant data.
+Your task: Return a JSON object mapping each field identifier to the correct value from the profile.
+- Use "id" as the key if non-empty, otherwise use "name"
+- For radio/checkbox fields (type=radio/checkbox) with an "options" list, the value MUST be one of the option "value" strings exactly
+- For date fields use YYYY-MM-DD format
+- Only include fields you are confident about; skip fields with no matching profile data
 
 FORM FIELDS:
 ${JSON.stringify(fieldList, null, 2)}
