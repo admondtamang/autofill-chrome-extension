@@ -1,0 +1,3 @@
+Save each ImmiAccount form page here as "Webpage, HTML only", with PII redacted.
+Name files in order: 01-applicant.html, 02-passport.html, ...
+Include conditional variants (e.g. 03-other-passports-yes.html).
